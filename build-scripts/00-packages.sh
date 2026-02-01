@@ -70,10 +70,16 @@ if [[ "$RUNNER_OS" == "Linux" ]]; then
   # Use sudo in install commands on Linux.
   echo "SUDO=sudo" >> "$GITHUB_ENV"
 elif [[ "$RUNNER_OS" == "macOS" ]]; then
-  # Use homebrew to install missing packages on mac.
+  # Use homebrew to install packages needed for building
   brew install \
+    autoconf \
+    automake \
+    gettext \
+    gperf \
+    libtool \
     md5sha1sum \
     nasm \
+    pkg-config \
     yasm
 
   # Unlink pre-installed homebrew packages that conflict with our static
@@ -85,7 +91,12 @@ elif [[ "$RUNNER_OS" == "macOS" ]]; then
   # Ignore errors if one of these is not installed.
   for i in \
     aom \
+    fontconfig \
+    freetype \
+    fribidi \
+    harfbuzz \
     lame \
+    libass \
     libvpx \
     libx11 \
     libxau \

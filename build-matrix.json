@@ -1,10 +1,24 @@
 {
-  "comment1": "Only build what we need for Cloud Run - Linux x64",
+  "comment1": "Linux for Cloud Run, macOS for local dev - same libs on all platforms",
   "hosted": [
     {
-      "comment": "Ubuntu runner for Linux x64 build - simpler than Alpine container hacks",
+      "comment": "Ubuntu runner for Linux x64 (Cloud Run)",
       "os": "ubuntu-latest",
       "os_name": "linux",
+      "target_arch": "x64",
+      "exe_ext": ""
+    },
+    {
+      "comment": "macOS arm64 (Apple Silicon)",
+      "os": "macos-latest",
+      "os_name": "osx",
+      "target_arch": "arm64",
+      "exe_ext": ""
+    },
+    {
+      "comment": "macOS x64 (Intel)",
+      "os": "macos-15-intel",
+      "os_name": "osx",
       "target_arch": "x64",
       "exe_ext": ""
     }

@@ -138,6 +138,9 @@ jobs:
       - name: Install fontconfig
         run: ./repo-src/build-scripts/09-fontconfig.sh
 
+      - name: Install harfbuzz
+        run: ./repo-src/build-scripts/09a-harfbuzz.sh
+
       - name: Install fribidi
         run: ./repo-src/build-scripts/10-fribidi.sh
 
