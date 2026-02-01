@@ -26,9 +26,10 @@ git checkout "$tag"
 # with static builds.
 # Use generic x86-64 target on Linux to ensure portability across different CPUs (Cloud Run, etc.)
 # while still allowing runtime CPU detection to use optimized ASM paths (SSE, AVX, etc.)
+# Add hardened flags for security and better crash diagnostics (same as Ubuntu packages).
 EXTRA_CFLAGS=""
 if [[ "$RUNNER_OS" == "Linux" ]]; then
-  EXTRA_CFLAGS="-march=x86-64 -mtune=generic"
+  EXTRA_CFLAGS="-march=x86-64 -mtune=generic -fstack-protector-strong -D_FORTIFY_SOURCE=2"
 fi
 
 ./configure \

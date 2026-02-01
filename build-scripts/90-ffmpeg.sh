@@ -69,6 +69,7 @@ fi
 
 if ! ./configure \
     --pkg-config-flags="--static" \
+    --toolchain=hardened \
     --disable-ffplay \
     --enable-libx264 \
     --enable-libmp3lame \

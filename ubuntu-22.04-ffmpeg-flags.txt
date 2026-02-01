@@ -1,0 +1,84 @@
+Ubuntu 22.04 (Jammy) FFmpeg System Package Configuration
+=========================================================
+
+Version: ffmpeg version 4.4.2-0ubuntu0.22.04.1
+Compiler: gcc 11 (Ubuntu 11.2.0-19ubuntu1)
+
+Configure flags:
+--prefix=/usr
+--extra-version=0ubuntu0.22.04.1
+--toolchain=hardened
+--libdir=/usr/lib/x86_64-linux-gnu
+--incdir=/usr/include/x86_64-linux-gnu
+--arch=amd64
+--enable-gpl
+--disable-stripping
+--enable-gnutls
+--enable-ladspa
+--enable-libaom
+--enable-libass
+--enable-libbluray
+--enable-libbs2b
+--enable-libcaca
+--enable-libcdio
+--enable-libcodec2
+--enable-libdav1d
+--enable-libflite
+--enable-libfontconfig
+--enable-libfreetype
+--enable-libfribidi
+--enable-libgme
+--enable-libgsm
+--enable-libjack
+--enable-libmp3lame
+--enable-libmysofa
+--enable-libopenjpeg
+--enable-libopenmpt
+--enable-libopus
+--enable-libpulse
+--enable-librabbitmq
+--enable-librubberband
+--enable-libshine
+--enable-libsnappy
+--enable-libsoxr
+--enable-libspeex
+--enable-libsrt
+--enable-libssh
+--enable-libtheora
+--enable-libtwolame
+--enable-libvidstabqq§
+--enable-libvorbis
+--enable-libvpx
+--enable-libwebp
+--enable-libx265
+--enable-libxml2
+--enable-libxvid
+--enable-libzimg
+--enable-libzmq
+--enable-libzvbi
+--enable-lv2
+--enable-omx
+--enable-openal
+--enable-opencl
+--enable-opengl
+--enable-sdl2
+--enable-pocketsphinx
+--enable-librsvg
+--enable-libmfx
+--enable-libdc1394
+--enable-libdrm
+--enable-libiec61883
+--enable-chromaprint
+--enable-frei0r
+--enable-libx264
+--enable-shared
+
+Key observations:
+- No -march flag (uses GCC default for amd64)
+- No --disable-asm (ASM optimizations ARE enabled)
+- --toolchain=hardened (security-focused compiler flags)
+- --enable-shared (shared libraries, not static)
+- Built with gcc 11
+
+How this was obtained:
+docker run --rm --platform linux/amd64 ubuntu:22.04 bash -c "apt-get update && apt-get install -y ffmpeg && ffmpeg -version"
