@@ -109,35 +109,10 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.matrix_config.outputs.MATRIX) }}
 
-    name: Build ${{ matrix.os_name }} ${{ matrix.target_arch }} ${{ matrix.container }}
+    name: Build ${{ matrix.os_name }} ${{ matrix.target_arch }}
     runs-on: ${{ matrix.os }}
-    container:
-      image: ${{ matrix.container }}
 
     steps:
-      - name: Add msys2 to the Windows path
-        if: runner.os == 'Windows'
-        run: |
-          # At this point, we're running Git Bash.  After this step, we will be
-          # running msys bash, just as we would be when debugging via SSH with
-          # mxschmitt/action-tmate.
-          echo "C:\\msys64\\usr\\bin" >> "$GITHUB_PATH"
-          echo "C:\\msys64\\mingw64\\bin" >> "$GITHUB_PATH"
-
-      # For node:alpine containers, Node is already installed. Just need to
-      # mask Alpine identity for GitHub Actions compatibility.
-      - name: Setup Alpine for GitHub Actions
-        if: contains(matrix.container, 'alpine')
-        run: |
-          sed -i "s:^ID=alpine:ID=NotpineForGHA:" /etc/os-release
-          apk add bash sudo
-        shell: sh
-
-      - name: Install Ubuntu Linux deps
-        if: startsWith(matrix.container, 'ubuntu')
-        # Sudo is needed by the first build script, but isn't in the default
-        # container image for Ubuntu.
-        run: apt -y update && apt -y upgrade && apt -y install sudo
 
       - uses: actions/checkout@v4
         with:
