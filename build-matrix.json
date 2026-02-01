@@ -14,13 +14,6 @@
       "os_name": "osx",
       "target_arch": "arm64",
       "exe_ext": ""
-    },
-    {
-      "comment": "macOS x64 (Intel)",
-      "os": "macos-15-intel",
-      "os_name": "osx",
-      "target_arch": "x64",
-      "exe_ext": ""
     }
   ],
 
