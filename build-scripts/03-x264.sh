@@ -24,9 +24,12 @@ git checkout "$tag"
 
 # NOTE: disable OpenCL-based features because it uses dlopen and can interfere
 # with static builds.
+# Disable ASM optimizations - can cause segfaults in Cloud Run/constrained environments.
 ./configure \
   --disable-opencl \
-  --enable-static
+  --disable-asm \
+  --enable-static \
+  --enable-pic
 
 # Only build and install the static library.
 make libx264.a
