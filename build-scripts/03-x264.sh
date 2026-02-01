@@ -24,13 +24,18 @@ git checkout "$tag"
 
 # NOTE: disable OpenCL-based features because it uses dlopen and can interfere
 # with static builds.
-# Use generic x86-64 target to ensure portability across different CPUs (Cloud Run, etc.)
+# Use generic x86-64 target on Linux to ensure portability across different CPUs (Cloud Run, etc.)
 # while still allowing runtime CPU detection to use optimized ASM paths (SSE, AVX, etc.)
+EXTRA_CFLAGS=""
+if [[ "$RUNNER_OS" == "Linux" ]]; then
+  EXTRA_CFLAGS="-march=x86-64 -mtune=generic"
+fi
+
 ./configure \
   --disable-opencl \
   --enable-static \
   --enable-pic \
-  --extra-cflags="-march=x86-64 -mtune=generic"
+  ${EXTRA_CFLAGS:+--extra-cflags="$EXTRA_CFLAGS"}
 
 # Only build and install the static library.
 make libx264.a
