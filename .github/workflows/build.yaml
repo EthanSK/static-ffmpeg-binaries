@@ -170,26 +170,26 @@ jobs:
       - name: Install OS packages
         run: ./repo-src/build-scripts/00-packages.sh
 
-      - name: Install libvpx
-        run: ./repo-src/build-scripts/01-libvpx.sh
-
-      - name: Install SVT-AV1
-        run: ./repo-src/build-scripts/02-svt-av1.sh
-
       - name: Install x264
         run: ./repo-src/build-scripts/03-x264.sh
-
-      - name: Install x265
-        run: ./repo-src/build-scripts/04-x265.sh
 
       - name: Install lame
         run: ./repo-src/build-scripts/05-lame.sh
 
-      - name: Install opus
-        run: ./repo-src/build-scripts/06-opus.sh
-
       - name: Install mbedtls
         run: ./repo-src/build-scripts/07-mbedtls.sh
+
+      - name: Install freetype
+        run: ./repo-src/build-scripts/08-freetype.sh
+
+      - name: Install fontconfig
+        run: ./repo-src/build-scripts/09-fontconfig.sh
+
+      - name: Install fribidi
+        run: ./repo-src/build-scripts/10-fribidi.sh
+
+      - name: Install libass
+        run: ./repo-src/build-scripts/11-libass.sh
 
       - name: Build ffmpeg and ffprobe
         run: ./repo-src/build-scripts/90-ffmpeg.sh

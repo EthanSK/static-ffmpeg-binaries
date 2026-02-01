@@ -30,19 +30,10 @@ if [[ "$RUNNER_OS" == "Linux" ]]; then
     export CFLAGS="-static"
     export LDFLAGS="-static"
   else
-    # We can't build a truly static binary, so we might as well enable hardware
-    # acceleration, which uses dynamic libraries and will depend heavily on the
-    # OS distribution.
-    PLATFORM_CONFIGURE_FLAGS="--enable-vaapi --enable-nvenc"
-    # TODO: Is AMF an option for us in this context?
-
-    # This version of ffmpeg will accept NVEnc 11.5.1.3+, but not Ubuntu
-    # 22.04's packaged version, 11.5.1.1.  This patch makes it flexible enough
-    # to build with the older NVEnc version in Ubuntu Jammy.
-    # For code archaeologists, the commits that set the minimum beyond 11.5.1.1
-    # were https://github.com/ffmpeg/ffmpeg/commit/5c288a44 (released in n6.0)
-    # and https://github.com/ffmpeg/ffmpeg/commit/05f8b2ca (released in n6.1).
-    patch -p1 -i ../repo-src/ffmpeg-nvenc-jammy.patch
+    # Skip hardware acceleration (VAAPI/nvenc) - they cause segfaults on
+    # Cloud Run and other environments without GPU access.
+    # Keep the build simpler and more portable.
+    PLATFORM_CONFIGURE_FLAGS=""
   fi
 elif [[ "$RUNNER_OS" == "macOS" ]]; then
   export CFLAGS="-static"
@@ -76,13 +67,13 @@ fi
 if ! ./configure \
     --pkg-config-flags="--static" \
     --disable-ffplay \
-    --enable-libvpx \
-    --enable-libsvtav1 \
     --enable-libx264 \
-    --enable-libx265 \
     --enable-libmp3lame \
-    --enable-libopus \
     --enable-mbedtls \
+    --enable-libfreetype \
+    --enable-fontconfig \
+    --enable-libfribidi \
+    --enable-libass \
     --enable-runtime-cpudetect \
     --enable-gpl \
     --enable-version3 \
