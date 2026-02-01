@@ -17,6 +17,12 @@
 set -e
 set -x
 
+# Set hardened/portable compiler flags for Linux (matches Ubuntu package builds)
+if [[ "$RUNNER_OS" == "Linux" ]]; then
+  export CFLAGS="-march=x86-64 -mtune=generic -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2"
+  export CXXFLAGS="$CFLAGS"
+fi
+
 version=$(repo-src/get-version.sh lame)
 curl -L -o lame-"$version".tar.gz https://sourceforge.net/projects/lame/files/lame/"$version"/lame-"$version".tar.gz/download
 tar xzf lame-"$version".tar.gz

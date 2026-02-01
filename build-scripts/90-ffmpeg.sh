@@ -35,7 +35,8 @@ if [[ "$RUNNER_OS" == "Linux" ]]; then
     # Use generic x86-64 target to ensure portability across different CPUs
     # while still allowing runtime CPU detection to use optimized ASM paths.
     # Enable PIC for shared library compatibility.
-    export CFLAGS="-march=x86-64 -mtune=generic"
+    # Add hardened flags: stack protector, fortify source, and -O2 optimization (same as Ubuntu)
+    export CFLAGS="-march=x86-64 -mtune=generic -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2"
     PLATFORM_CONFIGURE_FLAGS="--enable-pic"
   fi
 elif [[ "$RUNNER_OS" == "macOS" ]]; then

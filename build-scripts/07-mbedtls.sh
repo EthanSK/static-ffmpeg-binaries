@@ -27,6 +27,12 @@ cd mbedtls
 sed -e 's/-Wdocumentation//' -e 's/-Wno-documentation-deprecated-sync//' \
   -i.bk library/CMakeLists.txt
 
+# Set hardened/portable compiler flags for Linux (matches Ubuntu package builds)
+CMAKE_EXTRA_FLAGS=""
+if [[ "$RUNNER_OS" == "Linux" ]]; then
+  CMAKE_EXTRA_FLAGS="-DCMAKE_C_FLAGS=-march=x86-64 -mtune=generic -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2"
+fi
+
 # NOTE: without CMAKE_INSTALL_PREFIX on Windows, files are installed
 # to c:\Program Files.
 cmake . \
@@ -34,7 +40,8 @@ cmake . \
   -DENABLE_PROGRAMS=OFF \
   -DUNSAFE_BUILD=OFF \
   -DGEN_FILES=OFF \
-  -DENABLE_TESTING=OFF
+  -DENABLE_TESTING=OFF \
+  $CMAKE_EXTRA_FLAGS
 
 make
 $SUDO make install

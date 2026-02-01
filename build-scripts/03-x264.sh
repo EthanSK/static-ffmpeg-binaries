@@ -29,7 +29,7 @@ git checkout "$tag"
 # Add hardened flags for security and better crash diagnostics (same as Ubuntu packages).
 EXTRA_CFLAGS=""
 if [[ "$RUNNER_OS" == "Linux" ]]; then
-  EXTRA_CFLAGS="-march=x86-64 -mtune=generic -fstack-protector-strong -D_FORTIFY_SOURCE=2"
+  EXTRA_CFLAGS="-march=x86-64 -mtune=generic -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2"
 fi
 
 ./configure \
