@@ -1,0 +1,65 @@
+# Scheduled workflow to keep the "latest" release fresh
+# Runs monthly to prevent artifact expiration
+name: Scheduled Release
+
+on:
+  # Run monthly on the 1st at midnight UTC
+  schedule:
+    - cron: '0 0 1 * *'
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yaml
+    with:
+      ref: main
+
+  publish_release:
+    name: Publish latest release
+    needs: [build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: repo-src
+          ref: main
+          persist-credentials: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: assets
+          merge-multiple: true
+
+      - name: Publish or update latest release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          set -x
+
+          # Compile release notes
+          echo "Date:" >> body.txt
+          echo " - $(date -I)" >> body.txt
+          echo "" >> body.txt
+
+          echo "Software versions:" >> body.txt
+          cat repo-src/versions.txt | sed -e 's/^/ - /' >> body.txt
+          echo "" >> body.txt
+
+          echo "MD5 sums:" >> body.txt
+          (cd assets; md5sum * | sed -e 's/^/ - /') >> body.txt
+
+          # Delete existing 'latest' release if it exists
+          gh release delete latest -R ${{ github.repository }} --yes || true
+
+          # Create new 'latest' release
+          gh release create \
+              -R ${{ github.repository }} \
+              --notes-file body.txt \
+              --title "Latest Build" \
+              --prerelease \
+              latest \
+              assets/*
