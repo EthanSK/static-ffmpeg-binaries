@@ -32,9 +32,11 @@ if [[ "$RUNNER_OS" == "Linux" ]]; then
   else
     # Skip hardware acceleration (VAAPI/nvenc) - they cause segfaults on
     # Cloud Run and other environments without GPU access.
-    # Disable x86 ASM optimizations - can cause segfaults in constrained environments.
+    # Use generic x86-64 target to ensure portability across different CPUs
+    # while still allowing runtime CPU detection to use optimized ASM paths.
     # Enable PIC for shared library compatibility.
-    PLATFORM_CONFIGURE_FLAGS="--disable-x86asm --disable-inline-asm --enable-pic"
+    export CFLAGS="-march=x86-64 -mtune=generic"
+    PLATFORM_CONFIGURE_FLAGS="--enable-pic"
   fi
 elif [[ "$RUNNER_OS" == "macOS" ]]; then
   export CFLAGS="-static"

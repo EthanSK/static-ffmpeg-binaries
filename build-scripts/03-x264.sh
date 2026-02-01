@@ -24,12 +24,13 @@ git checkout "$tag"
 
 # NOTE: disable OpenCL-based features because it uses dlopen and can interfere
 # with static builds.
-# Disable ASM optimizations - can cause segfaults in Cloud Run/constrained environments.
+# Use generic x86-64 target to ensure portability across different CPUs (Cloud Run, etc.)
+# while still allowing runtime CPU detection to use optimized ASM paths (SSE, AVX, etc.)
 ./configure \
   --disable-opencl \
-  --disable-asm \
   --enable-static \
-  --enable-pic
+  --enable-pic \
+  --extra-cflags="-march=x86-64 -mtune=generic"
 
 # Only build and install the static library.
 make libx264.a
