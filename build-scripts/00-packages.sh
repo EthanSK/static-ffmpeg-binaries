@@ -41,22 +41,27 @@ if [[ "$RUNNER_OS" == "Linux" ]]; then
       pkgconfig \
       yasm
   else
-    # This can be used by the developer on Ubuntu.  The builds may or may not
-    # work portably on other platforms.
+    # Ubuntu build - install all required dependencies
     sudo apt -y update
     sudo apt -y upgrade
     sudo apt -y install \
+      autoconf \
+      automake \
       clang \
       cmake \
       curl \
       g++ \
+      gettext \
       git \
-      libffmpeg-nvenc-dev \
-      libva-dev \
+      gperf \
+      libexpat1-dev \
+      libtool \
+      libuuid1 \
       make \
       nasm \
       npm \
       pkg-config \
+      uuid-dev \
       wget \
       yasm
   fi
