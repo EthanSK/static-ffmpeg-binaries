@@ -32,10 +32,17 @@ if [[ "$RUNNER_OS" == "Linux" ]]; then
   else
     # Skip hardware acceleration (VAAPI/nvenc) - they cause segfaults on
     # Cloud Run and other environments without GPU access.
-    # Use generic x86-64 target to ensure portability across different CPUs
-    # while still allowing runtime CPU detection to use optimized ASM paths.
-    # Enable PIC for shared library compatibility.
-    # Add hardened flags: stack protector, fortify source, and -O2 optimization (same as Ubuntu)
+    #
+    # IMPORTANT: We use -march=x86-64 -mtune=generic to fix segfaults on Cloud Run.
+    # Without these flags, the compiler may optimize for the GitHub Actions runner's CPU
+    # (effectively -march=native), generating instructions that don't work on Cloud Run's
+    # virtualized CPUs. This caused SIGSEGV crashes during libx264 encoding.
+    #
+    # The fix: compile C code for generic x86-64, while keeping ASM enabled.
+    # Runtime CPU detection (--enable-runtime-cpudetect) will still use SSE/AVX/AVX2
+    # optimizations based on what the actual CPU supports - so encoding stays fast.
+    #
+    # Also add hardened flags for better crash diagnostics and security (same as Ubuntu).
     export CFLAGS="-march=x86-64 -mtune=generic -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2"
     PLATFORM_CONFIGURE_FLAGS="--enable-pic"
   fi

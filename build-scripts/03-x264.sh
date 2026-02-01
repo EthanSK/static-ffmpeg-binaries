@@ -24,9 +24,18 @@ git checkout "$tag"
 
 # NOTE: disable OpenCL-based features because it uses dlopen and can interfere
 # with static builds.
-# Use generic x86-64 target on Linux to ensure portability across different CPUs (Cloud Run, etc.)
-# while still allowing runtime CPU detection to use optimized ASM paths (SSE, AVX, etc.)
-# Add hardened flags for security and better crash diagnostics (same as Ubuntu packages).
+#
+# IMPORTANT: We use -march=x86-64 -mtune=generic to fix segfaults on Cloud Run.
+# Without these flags, the compiler may optimize for the GitHub Actions runner's CPU
+# (effectively -march=native), generating instructions that don't work on Cloud Run's
+# virtualized CPUs. This caused SIGSEGV crashes during libx264 encoding.
+#
+# The fix: compile C code for generic x86-64, while keeping ASM enabled.
+# Runtime CPU detection in x264 will still use SSE/AVX/AVX2 optimizations
+# based on what the actual CPU supports - so encoding stays fast.
+#
+# Also add hardened flags (-fstack-protector-strong, -D_FORTIFY_SOURCE=2) for
+# better crash diagnostics and security (same as Ubuntu packages).
 EXTRA_CFLAGS=""
 if [[ "$RUNNER_OS" == "Linux" ]]; then
   EXTRA_CFLAGS="-march=x86-64 -mtune=generic -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2"
