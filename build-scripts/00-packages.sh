@@ -55,6 +55,7 @@ if [[ "$RUNNER_OS" == "Linux" ]]; then
       git \
       gperf \
       libexpat1-dev \
+      libharfbuzz-dev \
       libtool \
       libuuid1 \
       make \
