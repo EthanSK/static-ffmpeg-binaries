@@ -2,8 +2,8 @@
   "comment1": "Linux for Cloud Run, macOS for local dev - same libs on all platforms",
   "hosted": [
     {
-      "comment": "Ubuntu runner for Linux x64 (Cloud Run)",
-      "os": "ubuntu-latest",
+      "comment": "Ubuntu 22.04 for Linux x64 (glibc 2.35 compatible with Cloud Run)",
+      "os": "ubuntu-22.04",
       "os_name": "linux",
       "target_arch": "x64",
       "exe_ext": ""
