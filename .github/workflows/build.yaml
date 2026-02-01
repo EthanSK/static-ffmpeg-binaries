@@ -132,6 +132,9 @@ jobs:
       - name: Install mbedtls
         run: ./repo-src/build-scripts/07-mbedtls.sh
 
+      - name: Install libwebp
+        run: ./repo-src/build-scripts/06-libwebp.sh
+
       - name: Install freetype
         run: ./repo-src/build-scripts/08-freetype.sh
 

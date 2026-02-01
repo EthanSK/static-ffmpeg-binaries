@@ -69,6 +69,7 @@ if ! ./configure \
     --disable-ffplay \
     --enable-libx264 \
     --enable-libmp3lame \
+    --enable-libwebp \
     --enable-mbedtls \
     --enable-libfreetype \
     --enable-fontconfig \
