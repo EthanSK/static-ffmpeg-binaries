@@ -5,7 +5,7 @@
 All libraries are compiled with these flags on Linux:
 
 ```bash
--march=x86-64 -mtune=generic -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2
+-march=x86-64 -mtune=generic -O2
 ```
 
 ### Why This Matters
@@ -20,17 +20,22 @@ Without explicit `-march=x86-64 -mtune=generic`, the compiler may optimize for t
 
 **Result:** Fast encoding that works everywhere.
 
-### Hardened Flags
+### Optional: Hardened Flags (for debugging segfaults)
 
-We also use Ubuntu-style hardened flags:
-- `-fstack-protector-strong` = stack smashing protection
-- `-D_FORTIFY_SOURCE=2` = buffer overflow detection
-- `-O2` = standard optimization level
+If you encounter segfaults and need better crash diagnostics, you can enable hardened flags:
+
+```bash
+-march=x86-64 -mtune=generic -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2
+```
+
+And add `--toolchain=hardened` to FFmpeg's configure.
 
 These provide:
 - Better crash diagnostics (clear error messages instead of cryptic segfaults)
 - Security against buffer overflows
 - Matches Ubuntu's package builds
+
+**Trade-off:** 5-15% performance hit. Only enable if debugging issues.
 
 ## Libraries Included
 

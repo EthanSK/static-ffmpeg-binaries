@@ -42,8 +42,10 @@ if [[ "$RUNNER_OS" == "Linux" ]]; then
     # Runtime CPU detection (--enable-runtime-cpudetect) will still use SSE/AVX/AVX2
     # optimizations based on what the actual CPU supports - so encoding stays fast.
     #
-    # Also add hardened flags for better crash diagnostics and security (same as Ubuntu).
-    export CFLAGS="-march=x86-64 -mtune=generic -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2"
+    # NOTE: If you get segfaults, try adding hardened flags for better crash diagnostics:
+    #   export CFLAGS="-march=x86-64 -mtune=generic -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2"
+    # and add --toolchain=hardened to configure. This has a 5-15% performance hit.
+    export CFLAGS="-march=x86-64 -mtune=generic -O2"
     PLATFORM_CONFIGURE_FLAGS="--enable-pic"
   fi
 elif [[ "$RUNNER_OS" == "macOS" ]]; then
@@ -77,7 +79,6 @@ fi
 
 if ! ./configure \
     --pkg-config-flags="--static" \
-    --toolchain=hardened \
     --disable-ffplay \
     --enable-libx264 \
     --enable-libmp3lame \

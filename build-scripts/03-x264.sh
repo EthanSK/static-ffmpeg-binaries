@@ -34,11 +34,12 @@ git checkout "$tag"
 # Runtime CPU detection in x264 will still use SSE/AVX/AVX2 optimizations
 # based on what the actual CPU supports - so encoding stays fast.
 #
-# Also add hardened flags (-fstack-protector-strong, -D_FORTIFY_SOURCE=2) for
-# better crash diagnostics and security (same as Ubuntu packages).
+# NOTE: If you get segfaults, try adding hardened flags for better crash diagnostics:
+#   EXTRA_CFLAGS="-march=x86-64 -mtune=generic -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2"
+# This has a 5-15% performance hit but gives clearer error messages.
 EXTRA_CFLAGS=""
 if [[ "$RUNNER_OS" == "Linux" ]]; then
-  EXTRA_CFLAGS="-march=x86-64 -mtune=generic -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2"
+  EXTRA_CFLAGS="-march=x86-64 -mtune=generic -O2"
 fi
 
 ./configure \

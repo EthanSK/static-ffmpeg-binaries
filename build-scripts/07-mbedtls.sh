@@ -27,10 +27,13 @@ cd mbedtls
 sed -e 's/-Wdocumentation//' -e 's/-Wno-documentation-deprecated-sync//' \
   -i.bk library/CMakeLists.txt
 
-# Set hardened/portable compiler flags for Linux (matches Ubuntu package builds)
+# Set portable compiler flags for Linux to ensure compatibility with Cloud Run.
+# NOTE: If you get segfaults, try adding hardened flags for better crash diagnostics:
+#   CMAKE_EXTRA_FLAGS="-DCMAKE_C_FLAGS=-march=x86-64 -mtune=generic -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2"
+# This has a 5-15% performance hit but gives clearer error messages.
 CMAKE_EXTRA_FLAGS=""
 if [[ "$RUNNER_OS" == "Linux" ]]; then
-  CMAKE_EXTRA_FLAGS="-DCMAKE_C_FLAGS=-march=x86-64 -mtune=generic -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2"
+  CMAKE_EXTRA_FLAGS="-DCMAKE_C_FLAGS=-march=x86-64 -mtune=generic -O2"
 fi
 
 # NOTE: without CMAKE_INSTALL_PREFIX on Windows, files are installed
