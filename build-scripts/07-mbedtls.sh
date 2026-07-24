@@ -29,11 +29,10 @@ sed -e 's/-Wdocumentation//' -e 's/-Wno-documentation-deprecated-sync//' \
 
 # Set portable compiler flags for Linux to ensure compatibility with Cloud Run.
 # NOTE: If you get segfaults, try adding hardened flags for better crash diagnostics:
-#   CMAKE_EXTRA_FLAGS="-DCMAKE_C_FLAGS=-march=x86-64 -mtune=generic -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2"
+#   export CFLAGS="-march=x86-64 -mtune=generic -fstack-protector-strong -D_FORTIFY_SOURCE=2 -O2"
 # This has a 5-15% performance hit but gives clearer error messages.
-CMAKE_EXTRA_FLAGS=""
 if [[ "$RUNNER_OS" == "Linux" ]]; then
-  CMAKE_EXTRA_FLAGS="-DCMAKE_C_FLAGS=-march=x86-64 -mtune=generic -O2"
+  export CFLAGS="-march=x86-64 -mtune=generic -O2" # The old CMake argument split this value at spaces and treated -O2 as an unknown option; use CMake's standard CFLAGS environment input.
 fi
 
 # NOTE: without CMAKE_INSTALL_PREFIX on Windows, files are installed
@@ -43,8 +42,7 @@ cmake . \
   -DENABLE_PROGRAMS=OFF \
   -DUNSAFE_BUILD=OFF \
   -DGEN_FILES=OFF \
-  -DENABLE_TESTING=OFF \
-  $CMAKE_EXTRA_FLAGS
+  -DENABLE_TESTING=OFF
 
 make
 $SUDO make install

@@ -1,4 +1,4 @@
-ffmpeg: n7.1
+ffmpeg: 20b009e30136cb55022ee32cfb4b2dcae1630bb4
 libvpx: v1.13.0
 svt-av1: v1.7.0
 x264: a8b68ebf

@@ -17,8 +17,11 @@
 set -e
 set -x
 
-tag=$(repo-src/get-version.sh ffmpeg)
-git clone --depth 1 https://git.ffmpeg.org/ffmpeg.git -b "$tag"
+ref=$(repo-src/get-version.sh ffmpeg)
+git init ffmpeg
+git -C ffmpeg remote add origin https://github.com/FFmpeg/FFmpeg.git
+git -C ffmpeg fetch --depth 1 origin "$ref"
+git -C ffmpeg checkout --detach FETCH_HEAD # Animated WebP decoding is newer than the latest stable release, so build the exact reviewed upstream commit instead of moving master.
 cd ffmpeg
 
 # Set some OS-specific environment variables and flags.

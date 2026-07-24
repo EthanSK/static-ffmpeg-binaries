@@ -1,3 +1,8 @@
+# Unreleased
+
+ - Pin FFmpeg to the first upstream revision with native animated WebP demuxing and decoding.
+ - Verify release binaries can decode every frame of a generated animated WebP.
+
 # n7.1-1
 
  - Update FFmpeg to n7.1 (PR #48)

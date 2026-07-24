@@ -153,6 +153,9 @@ jobs:
       - name: Build ffmpeg and ffprobe
         run: ./repo-src/build-scripts/90-ffmpeg.sh
 
+      - name: Verify required codecs
+        run: ./repo-src/build-scripts/91-check-features.sh
+
       - name: Prepare assets
         run: |
           set -e

@@ -43,7 +43,7 @@ These provide:
 |---------|---------|
 | libx264 | H.264 video encoding |
 | libmp3lame | MP3 audio encoding |
-| libwebp | WebP image/animation support |
+| libwebp | WebP image/animation encoding |
 | mbedtls | HTTPS URL support |
 | libass | ASS/SSA subtitle rendering |
 | freetype | Font rendering (for libass) |
@@ -61,7 +61,7 @@ These provide:
 
 - Ubuntu 22.04 (GitHub Actions runner)
 - GCC 11 (same as Ubuntu's FFmpeg package)
-- FFmpeg n7.1
+- FFmpeg commit `20b009e30136cb55022ee32cfb4b2dcae1630bb4` (first upstream revision containing both the native animated WebP decoder and demuxer)
 - Static linking (no shared library dependencies except glibc)
 
 ## Debugging Segfaults
