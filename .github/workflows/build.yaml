@@ -18,6 +18,11 @@
 name: Build
 
 on:
+  # Validate every change that lands on the release branch.
+  push:
+    branches:
+      - main
+
   # Runs when called from another workflow, such as the release or test
   # workflows.
   workflow_call:
@@ -70,7 +75,7 @@ jobs:
     outputs:
       MATRIX: ${{ steps.configure.outputs.MATRIX }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: repo-src
           ref: ${{ inputs.ref || github.ref }}
@@ -81,8 +86,8 @@ jobs:
         shell: node {0}
         run: |
           const fs = require('fs');
-          const enableDebug = ${{ inputs.debug }};
-          const enableSelfHosted = ${{ inputs.self_hosted }};
+          const enableDebug = ${{ inputs.debug || false }};
+          const enableSelfHosted = ${{ inputs.self_hosted || false }};
 
           // Use enableSelfHosted to decide what the build matrix below should
           // include.
@@ -114,7 +119,7 @@ jobs:
 
     steps:
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: repo-src
           ref: ${{ inputs.ref || github.ref }}
@@ -176,7 +181,7 @@ jobs:
       # This makes it possible to debug failures in the next step by
       # downloading binaries that fail the check for static linkage.
       - name: Upload assets as artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: binaries${{ env.SUFFIX }}
           path: assets/*
@@ -185,7 +190,7 @@ jobs:
         run: ./repo-src/build-scripts/99-check-static.sh
 
       - name: Debug
-        uses: mxschmitt/action-tmate@v3.6
+        uses: mxschmitt/action-tmate@v3.24
         with:
           limit-access-to-actor: true
         if: failure() && inputs.debug

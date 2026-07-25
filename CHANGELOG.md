@@ -1,7 +1,9 @@
 # Unreleased
 
  - Pin FFmpeg to the first upstream revision with native animated WebP demuxing and decoding.
- - Verify release binaries can decode every frame of a generated animated WebP.
+ - Verify release binaries can decode every frame of generated animated GIF and WebP files, including through stdin streams.
+ - Keep manual and monthly `latest` releases pinned to the exact commit that produced their binaries.
+ - Build and validate every push to `main`.
 
 # n7.1-1
 

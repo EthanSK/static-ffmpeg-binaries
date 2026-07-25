@@ -43,13 +43,13 @@ jobs:
       # "Write" to contents is necessary to create a release.
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: repo-src
           ref: ${{ github.ref }}
           persist-credentials: false
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: assets
           merge-multiple: true

@@ -9,11 +9,15 @@ on:
   # Allow manual trigger
   workflow_dispatch:
 
+concurrency:
+  group: scheduled-release
+  cancel-in-progress: false
+
 jobs:
   build:
     uses: ./.github/workflows/build.yaml
     with:
-      ref: main
+      ref: ${{ github.sha }}
 
   publish_release:
     name: Publish latest release
@@ -22,13 +26,13 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: repo-src
-          ref: main
+          ref: ${{ github.sha }}
           persist-credentials: false
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           path: assets
           merge-multiple: true
@@ -52,8 +56,16 @@ jobs:
           echo "MD5 sums:" >> body.txt
           (cd assets; md5sum * | sed -e 's/^/ - /') >> body.txt
 
-          # Delete existing 'latest' release if it exists
-          gh release delete latest -R ${{ github.repository }} --yes || true
+          # Replace both the release and tag so they describe the exact commit
+          # whose binaries were built.  Also handle a tag left behind without a
+          # release by an interrupted earlier run.
+          gh release delete latest \
+              -R ${{ github.repository }} \
+              --cleanup-tag \
+              --yes || true
+          gh api \
+              --method DELETE \
+              /repos/${{ github.repository }}/git/refs/tags/latest || true
 
           # Create new 'latest' release
           gh release create \
@@ -61,5 +73,6 @@ jobs:
               --notes-file body.txt \
               --title "Latest Build" \
               --prerelease \
+              --target "${{ github.sha }}" \
               latest \
               assets/*
