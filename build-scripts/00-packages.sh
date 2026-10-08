@@ -35,7 +35,9 @@ if [[ "$RUNNER_OS" == "Linux" ]]; then
       libvdpau-dev \
       linux-headers \
       make \
+      meson \
       nasm \
+      ninja \
       patch \
       perl \
       pkgconfig \
@@ -59,7 +61,9 @@ if [[ "$RUNNER_OS" == "Linux" ]]; then
       libtool \
       libuuid1 \
       make \
+      meson \
       nasm \
+      ninja-build \
       npm \
       pkg-config \
       uuid-dev \
@@ -78,7 +82,9 @@ elif [[ "$RUNNER_OS" == "macOS" ]]; then
     gperf \
     libtool \
     md5sha1sum \
+    meson \
     nasm \
+    ninja \
     pkg-config \
     yasm
 
@@ -91,6 +97,7 @@ elif [[ "$RUNNER_OS" == "macOS" ]]; then
   # Ignore errors if one of these is not installed.
   for i in \
     aom \
+    dav1d \
     fontconfig \
     freetype \
     fribidi \
@@ -135,6 +142,8 @@ elif [[ "$RUNNER_OS" == "Windows" ]]; then
     git \
     make \
     mingw-w64-x86_64-gcc \
+    mingw-w64-x86_64-meson \
+    mingw-w64-x86_64-ninja \
     nasm \
     patch \
     pkg-config \

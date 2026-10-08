@@ -84,6 +84,7 @@ if ! ./configure \
     --pkg-config-flags="--static" \
     --disable-ffplay \
     --enable-libx264 \
+    --enable-libdav1d \
     --enable-libmp3lame \
     --enable-libwebp \
     --enable-mbedtls \

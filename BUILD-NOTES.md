@@ -42,6 +42,7 @@ These provide:
 | Library | Purpose |
 |---------|---------|
 | libx264 | H.264 video encoding |
+| dav1d | AV1 software decoding on CPU-only workers |
 | libmp3lame | MP3 audio encoding |
 | libwebp | WebP image/animation encoding |
 | mbedtls | HTTPS URL support |
@@ -63,6 +64,22 @@ These provide:
 - GCC 11 (same as Ubuntu's FFmpeg package)
 - FFmpeg commit `20b009e30136cb55022ee32cfb4b2dcae1630bb4` (first upstream revision containing both the native animated WebP decoder and demuxer)
 - Static linking (no shared library dependencies except glibc)
+
+## AV1 decoding
+
+`12-dav1d.sh` builds the pinned, SHA-256-verified VideoLAN archive as a static
+library with two compile jobs. FFmpeg links it using `--enable-libdav1d`.
+This adds a software decoder, not an AV1 encoder or a GPU requirement.
+
+`91-check-features.sh` runs `tests/check-av1.sh` against both freshly built
+binaries. The check decodes both frames of a committed synthetic AV1 fixture
+with hardware acceleration disabled. Merely listing FFmpeg's native `av1`
+hardware wrapper does not pass: that wrapper cannot decode on a CPU-only worker.
+
+Source changes do not update released or deployed binaries. Before activation,
+run the Linux x64 and macOS arm64 build matrix and its existing static-linkage
+checks, publish the qualified artifacts, then update the consuming application's
+binaries and deployment separately.
 
 ## Debugging Segfaults
 

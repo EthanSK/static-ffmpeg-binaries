@@ -6,6 +6,8 @@ set -x
 
 cd ffmpeg
 
+bash ../repo-src/tests/check-av1.sh ./ffmpeg ./ffprobe
+
 ./ffmpeg -hide_banner -decoders 2>&1 | grep -E 'gif[[:space:]]+GIF \(Graphics Interchange Format\)' > /dev/null
 ./ffmpeg -hide_banner -decoders 2>&1 | grep -E 'webp_anim[[:space:]]+Animated WebP image' > /dev/null
 ./ffmpeg -hide_banner -demuxers 2>&1 | grep -E 'gif_pipe[[:space:]]+piped gif sequence' > /dev/null
