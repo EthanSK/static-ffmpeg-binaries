@@ -13,7 +13,6 @@ printf '%s  %s\n' \
   "$diagnostic_directory/source.mp4" | sha256sum -c -
 sha256sum "$binary_directory/ffmpeg-linux-x64" "$binary_directory/ffprobe-linux-x64" > "$diagnostic_directory/binary-sha256.txt"
 uname -a > "$diagnostic_directory/host.txt"
-docker pull ubuntu:22.04
 
 # Native Linux runner only. Keep the same 8 GiB / 2 CPU contract as the earlier
 # emulated test, without sharing the user's local Docker host or dev stacks.
@@ -23,7 +22,7 @@ container_id=$(docker create --memory=8g --memory-swap=8g --cpus=2 \
   --mount "type=bind,src=$binary_directory/ffmpeg-linux-x64,dst=/ffmpeg,readonly" \
   --mount "type=bind,src=$binary_directory/ffprobe-linux-x64,dst=/ffprobe,readonly" \
   --mount "type=bind,src=$diagnostic_directory/source.mp4,dst=/source.mp4,readonly" \
-  ubuntu:22.04 sh -c '
+  ffmpeg-capacity-base sh -c '
     /ffmpeg -hide_banner -nostdin -benchmark -threads 1 -filter_threads 1 \
       -max_pixels 16777216 -i /source.mp4 -map 0:v:0 -an \
       -vf "scale=4096:4096:force_original_aspect_ratio=decrease,pad=4096:4096:(ow-iw)/2:(oh-ih)/2,setsar=1" \

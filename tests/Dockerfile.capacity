@@ -1,0 +1,7 @@
+FROM ubuntu:22.04
+
+# Match the system-library dependencies of the existing glibc artifact. Codec
+# libraries (including dav1d) remain linked statically in the tested binary.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libxcb1 libxcb-shm0 zlib1g libexpat1 libbz2-1.0 liblzma5 \
+    && apt-get clean

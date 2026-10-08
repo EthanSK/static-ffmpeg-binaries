@@ -96,6 +96,16 @@ small fixture with explicitly limited decoder, filter and encoder threads.
 It neither changes application worker tiers nor proves a complete worker fits
 that tier after runtime, remote input and large RAM-backed output are included.
 
+## 2026-10-08 AV1 artifact qualification
+
+Build run `37806734886` passed on native Linux x64 and macOS arm64 at source
+commit `70c48afce7457cb81e9d34665f7c876874c4e2c7`. It ran actual default AV1 CPU
+decoding with both FFmpeg and FFprobe, preserved the animated GIF/WebP file and
+stdin checks, and passed the existing platform-linkage workflow checks.
+The diagnostic/docs-only commits after that source commit do not change those
+binary build inputs. Their qualification-record commit skips a redundant full
+matrix; the separate capacity diagnostic is run explicitly against its artifact.
+
 ## Debugging Segfaults
 
 If you see segfaults, check:
