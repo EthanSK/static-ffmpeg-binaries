@@ -1,0 +1,37 @@
+name: Diagnose conversion capacity
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: Successful Build run whose Linux x64 artifact to test
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: binaries-linux-x64
+          path: binaries
+          run-id: ${{ inputs.build_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Measure the bounded maximum-raster fixture on native Linux
+        run: |
+          chmod +x binaries/ffmpeg-linux-x64 binaries/ffprobe-linux-x64
+          bash tests/diagnose-capacity.sh binaries
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: native-linux-capacity-diagnostics
+          path: diagnostics

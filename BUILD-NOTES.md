@@ -81,6 +81,21 @@ run the Linux x64 and macOS arm64 build matrix and its existing static-linkage
 checks, publish the qualified artifacts, then update the consuming application's
 binaries and deployment separately.
 
+## Optional native conversion capacity diagnostic
+
+The manually dispatched `Diagnose conversion capacity` workflow downloads an
+existing successful Build run's Linux artifact; it does not rebuild FFmpeg.
+It converts the committed synthetic 36-frame, 4096-square, 10-bit 4:4:4 H264
+fixture in an isolated 8 GiB / 2 CPU container on a native Linux runner.
+The fixture was encoded with `ref=16:bframes=0`; `ffprobe`'s stream-level `refs`
+field alone is not a maximum decoded-buffer certificate.
+
+The diagnostic records actual binary checksums, FFmpeg time/RSS, cgroup memory
+peak and OOM state, and verifies all 36 output frames. It only qualifies this
+small fixture with explicitly limited decoder, filter and encoder threads.
+It neither changes application worker tiers nor proves a complete worker fits
+that tier after runtime, remote input and large RAM-backed output are included.
+
 ## Debugging Segfaults
 
 If you see segfaults, check:
