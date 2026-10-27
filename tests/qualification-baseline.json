@@ -1,0 +1,37 @@
+{
+  "id": 407051084,
+  "tag_name": "latest",
+  "target_commitish": "70c48afce7457cb81e9d34665f7c876874c4e2c7",
+  "published_at": "2026-10-08T16:38:42Z",
+  "ffmpeg_commit": "20b009e30136cb55022ee32cfb4b2dcae1630bb4",
+  "assets": [
+    {
+      "id": 622387563,
+      "name": "ffmpeg-linux-x64",
+      "size": 32062384,
+      "digest": "sha256:e48c8115013464ab94b7150d2f507dda17306b5bc8d53979214ab21f4585706c",
+      "browser_download_url": "https://github.com/EthanSK/static-ffmpeg-binaries/releases/download/latest/ffmpeg-linux-x64"
+    },
+    {
+      "id": 622387681,
+      "name": "ffmpeg-osx-arm64",
+      "size": 28316328,
+      "digest": "sha256:2bedefa0c2270c03b07a83215725e83d5bc5ad8f44f1baeeca1532c2d728e607",
+      "browser_download_url": "https://github.com/EthanSK/static-ffmpeg-binaries/releases/download/latest/ffmpeg-osx-arm64"
+    },
+    {
+      "id": 622387684,
+      "name": "ffprobe-linux-x64",
+      "size": 31849328,
+      "digest": "sha256:85a6d987e30b0869ddc34e05bba065f9c7ce82d2b0b6b1ef008cc9beeb9b1d65",
+      "browser_download_url": "https://github.com/EthanSK/static-ffmpeg-binaries/releases/download/latest/ffprobe-linux-x64"
+    },
+    {
+      "id": 622387685,
+      "name": "ffprobe-osx-arm64",
+      "size": 28124744,
+      "digest": "sha256:9a30c36cf8a0e8facadea445f97c143741997cd2c02252276b4ac02456e7e2fe",
+      "browser_download_url": "https://github.com/EthanSK/static-ffmpeg-binaries/releases/download/latest/ffprobe-osx-arm64"
+    }
+  ]
+}

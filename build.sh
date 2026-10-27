@@ -18,11 +18,11 @@
 # for quick automated builds and for testing build script changes.
 
 # Build with:
-#   rm -rf build
+#   rm -rf build.noindex
 #   docker run --rm -v $(pwd):/src -w /src ubuntu:24.04 /src/build.sh
 # Build outputs are:
-#   build/ffmpeg/ffmpeg
-#   build/ffmpeg/ffprobe
+#   build.noindex/ffmpeg/ffmpeg
+#   build.noindex/ffmpeg/ffprobe
 
 # Fail on error
 set -e
@@ -51,11 +51,11 @@ if [[ $(id -u) == "0" ]]; then
   # Make sudo work without a password.
   echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 
-  # Create build/ and make it owned by ubuntu inside this Docker container, not
+  # Create build.noindex/ and make it owned by ubuntu inside this Docker container, not
   # the current user outside Docker.
-  rm -rf build
-  mkdir build
-  chown ubuntu build
+  rm -rf build.noindex
+  mkdir build.noindex
+  chown ubuntu build.noindex
 
   if [ -z "$GITHUB_ENV" ]; then
     # Running outside of GitHub Actions?  Set these important variables.
@@ -70,12 +70,12 @@ if [[ $(id -u) == "0" ]]; then
 fi
 
 # If we are running outside a container, we may not have hit the "root" branch
-# above.  Create the build/ folder if it doesn't exist.
-mkdir -p build
+# above.  Create the build.noindex/ folder if it doesn't exist.
+mkdir -p build.noindex
 
 # Set up the same symlink we get from our GitHub workflow, expected by the
 # build scripts.
-cd build
+cd build.noindex
 ln -s ../ repo-src
 
 # Run each build script in order.

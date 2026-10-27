@@ -1,0 +1,220 @@
+diff --git a/Changelog b/Changelog
+index 08a79e9206746cac36afa5fb880baaea9f9c2ba8..adce811cfef2dce7871e81d5810f9e31e1889f33 100644
+--- a/Changelog
++++ b/Changelog
+@@ -3,6 +3,7 @@ releases are sorted from youngest to oldest.
+ 
+ version <next>:
+ - DTS:X height channels in the DCA decoder
++- ffmpeg -seek_stream option to select the initial input seek reference stream
+ 
+ version 9.1:
+ - ASTC image encoding and decoding via libastcenc, with .astc and KTX 1.0 muxers and demuxers
+diff --git a/doc/ffmpeg.texi b/doc/ffmpeg.texi
+index d31678f8d8cd4d4fab586272e0260968f54deb5c..a147bbf843435a041d925574eb85cf714e020c5e 100644
+--- a/doc/ffmpeg.texi
++++ b/doc/ffmpeg.texi
+@@ -2847,6 +2847,20 @@ to the @option{-ss} option is considered an actual timestamp, and is not
+ offset by the start time of the file. This matters only for files which do
+ not start from timestamp 0, such as transport streams.
+ 
++@item -seek_stream @var{stream_specifier} (@emph{input})
++Select the reference stream for the initial input seek requested by
++@option{-ss} or @option{-sseof}. The stream specifier must match exactly one
++stream in this input, for example @code{a:0} for the first audio stream or
++@code{1} for absolute stream index 1. See @ref{Stream specifiers}.
++Invalid specifiers and specifiers matching no streams or multiple streams
++cause an error.
++
++By default, the demuxer selects the reference stream automatically. Selecting
++an output stream with @option{-map} does not select the seek reference.
++This option does not change the timestamp origin, output stream selection,
++or seeks performed by @option{-stream_loop}. Seeking remains subject to the
++demuxer's capabilities and may affect the decodability of other streams.
++
+ @item -thread_queue_size @var{size} (@emph{output})
+ This option specifies the maximum number of packets per stream that may be
+ queued to each muxing thread.
+diff --git a/fftools/ffmpeg.h b/fftools/ffmpeg.h
+index f51867435da36a62f99d71433533f1095822518b..b40d8bfdc9fce3e3c5d2442705c90a94606f37e8 100644
+--- a/fftools/ffmpeg.h
++++ b/fftools/ffmpeg.h
+@@ -155,6 +155,7 @@ typedef struct OptionsContext {
+     float readrate_catchup;
+     double readrate_initial_burst;
+     int accurate_seek;
++    const char *seek_stream;
+     int thread_queue_size;
+     int input_sync_ref;
+     int find_stream_info;
+diff --git a/fftools/ffmpeg_demux.c b/fftools/ffmpeg_demux.c
+index 5409dcdc6c0915da33660f281ca8601608c1bc78..92115c846b9b96076abf7164be5337364fb4dac8 100644
+--- a/fftools/ffmpeg_demux.c
++++ b/fftools/ffmpeg_demux.c
+@@ -2329,6 +2329,7 @@ int ifile_open(const OptionsContext *o, const char *filename, Scheduler *sch)
+     const char* subtitle_codec_name = NULL;
+     const char*     data_codec_name = NULL;
+     int scan_all_pmts_set = 0;
++    int seek_stream = -1;
+ 
+     int64_t start_time     = o->start_time;
+     int64_t start_time_eof = o->start_time_eof;
+@@ -2517,6 +2518,32 @@ int ifile_open(const OptionsContext *o, const char *filename, Scheduler *sch)
+         }
+     }
+ 
++    if (o->seek_stream) {
++        StreamSpecifier ss;
++
++        ret = stream_specifier_parse(&ss, o->seek_stream, 0, d);
++        if (ret < 0)
++            return ret;
++
++        for (int i = 0; i < ic->nb_streams; i++) {
++            if (!stream_specifier_match(&ss, ic, ic->streams[i], d))
++                continue;
++            if (seek_stream >= 0) {
++                av_log(d, AV_LOG_ERROR, "Seek stream specifier '%s' matches multiple streams.\n",
++                       o->seek_stream);
++                stream_specifier_uninit(&ss);
++                return AVERROR(EINVAL);
++            }
++            seek_stream = i;
++        }
++        stream_specifier_uninit(&ss);
++        if (seek_stream < 0) {
++            av_log(d, AV_LOG_ERROR, "Seek stream specifier '%s' matches no streams.\n",
++                   o->seek_stream);
++            return AVERROR(EINVAL);
++        }
++    }
++
+     if (start_time != AV_NOPTS_VALUE && start_time_eof != AV_NOPTS_VALUE) {
+         av_log(d, AV_LOG_WARNING, "Cannot use -ss and -sseof both, using -ss\n");
+         start_time_eof = AV_NOPTS_VALUE;
+@@ -2558,7 +2585,11 @@ int ifile_open(const OptionsContext *o, const char *filename, Scheduler *sch)
+                 seek_timestamp -= 3*AV_TIME_BASE / 23;
+             }
+         }
+-        ret = avformat_seek_file(ic, -1, INT64_MIN, seek_timestamp, seek_timestamp, 0);
++        if (seek_stream >= 0)
++            seek_timestamp = av_rescale_q_rnd(seek_timestamp, AV_TIME_BASE_Q,
++                                              ic->streams[seek_stream]->time_base,
++                                              AV_ROUND_DOWN);
++        ret = avformat_seek_file(ic, seek_stream, INT64_MIN, seek_timestamp, seek_timestamp, 0);
+         if (ret < 0) {
+             av_log(d, AV_LOG_WARNING, "could not seek to position %0.3f\n",
+                    (double)timestamp / AV_TIME_BASE);
+diff --git a/fftools/ffmpeg_opt.c b/fftools/ffmpeg_opt.c
+index 265bfba35fe2f7031aaa2c1da80c72ef27872285..9339e064ea2f6b3871fcf0fef0c7df2da9a862b3 100644
+--- a/fftools/ffmpeg_opt.c
++++ b/fftools/ffmpeg_opt.c
+@@ -1616,6 +1616,9 @@ const OptionDef options[] = {
+     { "accurate_seek",          OPT_TYPE_BOOL, OPT_OFFSET | OPT_EXPERT | OPT_INPUT,
+         { .off = OFFSET(accurate_seek) },
+         "enable/disable accurate seeking with -ss" },
++    { "seek_stream",            OPT_TYPE_STRING, OPT_OFFSET | OPT_EXPERT | OPT_INPUT,
++        { .off = OFFSET(seek_stream) },
++        "set the reference stream for initial input seeking", "stream_specifier" },
+     { "isync",                  OPT_TYPE_INT, OPT_OFFSET | OPT_EXPERT | OPT_INPUT,
+         { .off = OFFSET(input_sync_ref) },
+         "Indicate the input index for sync reference", "sync ref" },
+diff --git a/tests/fate/ffmpeg.mak b/tests/fate/ffmpeg.mak
+index ff5dfdd4c84430eeeed238e88ea5013d2bcce5f0..02f39371b015cdd26db055a779bb37f9abd33222 100644
+--- a/tests/fate/ffmpeg.mak
++++ b/tests/fate/ffmpeg.mak
+@@ -16,6 +16,57 @@ fate-ffmpeg-filter_colorkey: CMD = framecrc -auto_conversion_filters -idct simpl
+ FATE_FFMPEG-$(call FILTERFRAMECRC, COLOR) += fate-ffmpeg-lavfi
+ fate-ffmpeg-lavfi: CMD = framecrc -lavfi color=d=1:r=5 -fflags +bitexact
+ 
++# Video starts at 2s, so an automatic seek misses the 0.5s audio window.
++tests/data/seek-stream.mov tests/data/seek-stream-offset.mov: TAG = GEN
++tests/data/seek-stream.mov: ffmpeg$(PROGSSUF)$(EXESUF) | tests/data
++	$(M)$(TARGET_EXEC) $(TARGET_PATH)/$< -nostdin -y -v error \
++        -itsoffset 2 -f lavfi -i "color=s=16x16:r=10:d=1" \
++        -f lavfi -i "sine=sample_rate=8000:d=3" \
++        -map 0:v -map 1:a -c:v mpeg4 -threads:v 1 -g 10 -bf 0 \
++        -flags:v +bitexact -fps_mode passthrough -c:a pcm_s16le \
++        -fflags +bitexact -f mov $(TARGET_PATH)/$@ 2>/dev/null
++
++tests/data/seek-stream-offset.mov: tests/data/seek-stream.mov ffmpeg$(PROGSSUF)$(EXESUF)
++	$(M)$(TARGET_EXEC) $(TARGET_PATH)/ffmpeg$(PROGSSUF)$(EXESUF) -nostdin -y -v error \
++        -i $(TARGET_PATH)/tests/data/seek-stream.mov -map 0 -c copy \
++        -output_ts_offset 5 -fflags +bitexact -f mov $(TARGET_PATH)/$@ 2>/dev/null
++
++FATE_SEEK_STREAM = fate-ffmpeg-seek-stream-specifier fate-ffmpeg-seek-stream-index \
++                   fate-ffmpeg-seek-stream-fractional fate-ffmpeg-seek-stream-offset \
++                   fate-ffmpeg-seek-stream-sseof fate-ffmpeg-seek-stream-default
++FATE_SEEK_STREAM_ERROR = fate-ffmpeg-seek-stream-invalid fate-ffmpeg-seek-stream-unmatched \
++                         fate-ffmpeg-seek-stream-ambiguous
++FATE_FFMPEG-$(call FRAMECRC, MOV, PCM_S16LE, LAVFI_INDEV COLOR_FILTER SINE_FILTER \
++                          WRAPPED_AVFRAME_DECODER MPEG4_ENCODER MOV_MUXER ARESAMPLE_FILTER \
++                          PCM_S16$(if $(filter yes,$(HAVE_BIGENDIAN)),BE,LE)_DECODER) += \
++    $(FATE_SEEK_STREAM) $(FATE_SEEK_STREAM_ERROR)
++$(FATE_SEEK_STREAM) $(FATE_SEEK_STREAM_ERROR): tests/data/seek-stream.mov
++$(FATE_SEEK_STREAM): SRC = $(TARGET_PATH)/tests/data/seek-stream.mov
++$(FATE_SEEK_STREAM): SEEK_OPTIONS = -ss 0.5
++$(FATE_SEEK_STREAM): SEEK_REF = -seek_stream a:0
++$(FATE_SEEK_STREAM): REF = $(SRC_PATH)/tests/ref/fate/ffmpeg-seek-stream-specifier
++$(FATE_SEEK_STREAM): CMD = framecrc $(SEEK_OPTIONS) $(SEEK_REF) -i $(SRC) \
++    -map 0:a:0 -t 0.1 -c:a pcm_s16le
++fate-ffmpeg-seek-stream-index: SEEK_REF = -seek_stream 1
++fate-ffmpeg-seek-stream-fractional: SEEK_OPTIONS = -ss 0.5001
++fate-ffmpeg-seek-stream-fractional: REF = $(SRC_PATH)/tests/ref/fate/ffmpeg-seek-stream-fractional
++fate-ffmpeg-seek-stream-offset: tests/data/seek-stream-offset.mov
++fate-ffmpeg-seek-stream-offset: SRC = $(TARGET_PATH)/tests/data/seek-stream-offset.mov
++fate-ffmpeg-seek-stream-sseof: SEEK_OPTIONS = -sseof -2.5
++fate-ffmpeg-seek-stream-default: SEEK_REF =
++fate-ffmpeg-seek-stream-default: REF = $(SRC_PATH)/tests/ref/fate/ffmpeg-seek-stream-default
++$(FATE_SEEK_STREAM_ERROR): CMD = ! run $(FFMPEG) -nostdin -hide_banner -v error \
++    -ss 0.5 -seek_stream $(SEEK_STREAM) -i $(TARGET_PATH)/tests/data/seek-stream.mov \
++    -map 0:a:0 -t 0.1 -c:a pcm_s16le -f framecrc -
++$(FATE_SEEK_STREAM_ERROR): CMP = grep
++fate-ffmpeg-seek-stream-invalid: SEEK_STREAM = a:bogus
++fate-ffmpeg-seek-stream-invalid: REF = Trailing garbage at the end of a stream specifier
++fate-ffmpeg-seek-stream-unmatched: SEEK_STREAM = a:9
++fate-ffmpeg-seek-stream-unmatched: REF = matches no streams
++# An empty stream specifier matches every stream in the input.
++fate-ffmpeg-seek-stream-ambiguous: SEEK_STREAM = ""
++fate-ffmpeg-seek-stream-ambiguous: REF = matches multiple streams
++
+ FATE_FFMPEG-$(call FILTERFRAMECRC, TESTSRC2 FORMAT SETPARAMS SCALE, LAVFI_INDEV WRAPPED_AVFRAME_DECODER MPEG2VIDEO_ENCODER) += fate-ffmpeg-chroma-location
+ fate-ffmpeg-chroma-location: CMD = framecrc -auto_conversion_filters -f lavfi -i testsrc2=s=64x64:r=25:d=1,format=yuv420p,setparams=chroma_location=topleft -sws_flags +accurate_rnd+bitexact -flags +bitexact -idct simple -dct fastint -threads 1 -c:v mpeg2video -qscale:v 2 -frames:v 1
+ 
+diff --git a/tests/ref/fate/ffmpeg-seek-stream-default b/tests/ref/fate/ffmpeg-seek-stream-default
+new file mode 100644
+index 0000000000000000000000000000000000000000..63788fb2b14daa8c8ce43bf20f94a3821cfe3b25
+--- /dev/null
++++ b/tests/ref/fate/ffmpeg-seek-stream-default
+@@ -0,0 +1,5 @@
++#tb 0: 1/8000
++#media_type 0: audio
++#codec_id 0: pcm_s16le
++#sample_rate 0: 8000
++#channel_layout_name 0: mono
+diff --git a/tests/ref/fate/ffmpeg-seek-stream-fractional b/tests/ref/fate/ffmpeg-seek-stream-fractional
+new file mode 100644
+index 0000000000000000000000000000000000000000..590dd70fc7fe2aac5527145cf48366ad19b964d1
+--- /dev/null
++++ b/tests/ref/fate/ffmpeg-seek-stream-fractional
+@@ -0,0 +1,7 @@
++#tb 0: 1/8000
++#media_type 0: audio
++#codec_id 0: pcm_s16le
++#sample_rate 0: 8000
++#channel_layout_name 0: mono
++0,          0,          0,       95,      190, 0x85875b8e
++0,         95,         95,      705,     1410, 0xf3b5b30c
+diff --git a/tests/ref/fate/ffmpeg-seek-stream-specifier b/tests/ref/fate/ffmpeg-seek-stream-specifier
+new file mode 100644
+index 0000000000000000000000000000000000000000..2907b971c63943e48929543fa37ac09701f30a87
+--- /dev/null
++++ b/tests/ref/fate/ffmpeg-seek-stream-specifier
+@@ -0,0 +1,7 @@
++#tb 0: 1/8000
++#media_type 0: audio
++#codec_id 0: pcm_s16le
++#sample_rate 0: 8000
++#channel_layout_name 0: mono
++0,          0,          0,       96,      192, 0x85875b8e
++0,         96,         96,      704,     1408, 0x8d8eb30c

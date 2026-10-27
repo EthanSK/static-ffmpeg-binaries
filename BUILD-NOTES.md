@@ -56,13 +56,13 @@ These provide:
 
 - VAAPI/DRM hardware acceleration (causes segfaults on Cloud Run - no GPU)
 - x265 (not needed, adds build complexity)
-- Most other codecs (not needed for our use case)
+- Additional third-party encoder libraries not explicitly enabled above; native FFmpeg codecs remain available according to the recorded build configuration.
 
 ## Build Environment
 
 - Ubuntu 22.04 (GitHub Actions runner)
 - GCC 11 (same as Ubuntu's FFmpeg package)
-- FFmpeg commit `20b009e30136cb55022ee32cfb4b2dcae1630bb4` (first upstream revision containing both the native animated WebP decoder and demuxer)
+- FFmpeg source and carried-patch identities are pinned in `versions.txt`; the previous release used `20b009e30136cb55022ee32cfb4b2dcae1630bb4`.
 - Static linking (no shared library dependencies except glibc)
 
 ## AV1 decoding
@@ -120,3 +120,58 @@ If you see segfaults, check:
      "apt update && apt install -y ffmpeg && ffmpeg -version"
    ```
    See `ubuntu-22.04-ffmpeg-flags.txt` for the full configuration.
+
+## Carried seek-reference patch and qualification
+
+The optional input `-seek_stream a:0` selects the first audio stream as the
+reference for the initial `-ss`/`-sseof` seek. Put it before the relevant `-i`.
+It does not choose output streams, change the file clock, or change loop seeks.
+Omitting it follows the existing automatic reference path. Demuxer seeking and
+other-track decodability remain format-dependent. In particular, an MKV seek
+can still scan bytes; this option is not a universal fast-seek guarantee.
+
+The source pin, patch SHA256, expected whole-source tree and upstream links
+live in `versions.txt`. `tools/prepare-ffmpeg.py` checks a fresh exact checkout,
+applies with Git's index, and verifies the reviewed tree before configure.
+Dirty, incompatible, changed or already integrated inputs stop the build.
+Patched builds carry a `seek-stream-<tree>` version suffix; the matched control
+is unpatched. Dependency pins and codec/CPU flags are preserved. Compiler jobs
+are limited to two per native platform runner; the control reuses that runner's
+dependency builds, without rebuilding libraries or running on Ethan's Mac.
+
+Every build runs generated-media seek/content regressions and all nine carried
+FATE cases, plus the existing real AV1 and animated GIF/WebP checks. Candidate
+qualification additionally compares the checksum-pinned previous release,
+matched new-unpatched control, and candidate: configuration, required features,
+linkage, glibc/macOS minimum, default decode/copy/encode outputs, and ffprobe
+fields. It runs full FATE without external samples and Linux CPU fallback tests
+under QEMU Nehalem without AVX. Reports and provenance are release assets.
+An old/control byte or metadata difference is recorded as upgrade evidence;
+required features, output counts, platform requirements and candidate/control
+default equality are gates. Native-runner and emulated-CPU checks do not qualify
+the actual cloud image, remote HTTP/Range input, browser timing or every codec.
+
+Publish a new, never-reused `*-seek-stream-rcN` tag from the candidate branch.
+The release workflow enables qualification and uses `--prerelease --latest=false`.
+The normal main/latest paths remain untouched until application qualification.
+Use the exact candidate and control digests in testing; do not rebuild after a
+successful qualification and assume the bytes are equivalent. Keep the old
+release pair by digest for rollback. Removing the option restores automatic
+seeking for the new version; restoring the old binary pair also reverses the
+upstream upgrade. Do not remove an application workaround until its owner has
+qualified real media, previews, timing, CPU, latency, memory and I/O.
+
+Local generated outputs belong in `build.noindex/` or task-owned external
+scratch. To run the media checks against isolated binaries:
+
+```sh
+python3 tests/check-seek-stream.py /path/to/candidate/ffmpeg /path/to/candidate/ffprobe \
+  --unpatched /path/to/control/ffmpeg --work-dir /external/scratch/tests.noindex \
+  --report /external/scratch/seek-results.json
+```
+
+Source identity is reproducible from the pin and patch. OS package bootstrap,
+compiler and hosted runner images still move; provenance records them but this
+does not promise bit-identical recompilation. Bumping the pin or changing the
+carried patch requires repeating qualification. Drop/reconcile the patch when
+an equivalent upstream change lands, rather than silently skipping it.

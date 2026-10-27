@@ -18,11 +18,28 @@ set -e
 set -x
 
 ref=$(repo-src/get-version.sh ffmpeg)
-git init ffmpeg
-git -C ffmpeg remote add origin https://github.com/FFmpeg/FFmpeg.git
-git -C ffmpeg fetch --depth 1 origin "$ref"
-git -C ffmpeg checkout --detach FETCH_HEAD # Animated WebP decoding is newer than the latest stable release, so build the exact reviewed upstream commit instead of moving master.
-cd ffmpeg
+mode=${1:-candidate}
+extra_version=()
+case "$mode" in
+  candidate)
+    source_dir=ffmpeg
+    tree=$(repo-src/get-version.sh ffmpeg-patched-tree)
+    extra_version=("--extra-version=seek-stream-${tree:0:7}")
+    ;;
+  control) source_dir=ffmpeg-control ;;
+  *) echo "Expected candidate or control build mode" >&2; exit 2 ;;
+esac
+git init "$source_dir"
+git -C "$source_dir" remote add origin https://github.com/FFmpeg/FFmpeg.git
+git -C "$source_dir" fetch --depth 1 origin "$ref"
+# Pin the tested upstream revision; a moving branch is never a build input.
+git -C "$source_dir" checkout --detach FETCH_HEAD
+if [[ "$mode" == control ]]; then
+  python3 repo-src/tools/prepare-ffmpeg.py "$source_dir" --control
+else
+  python3 repo-src/tools/prepare-ffmpeg.py "$source_dir"
+fi
+cd "$source_dir"
 
 # Set some OS-specific environment variables and flags.
 if [[ "$RUNNER_OS" == "Linux" ]]; then
@@ -96,10 +113,12 @@ if ! ./configure \
     --enable-gpl \
     --enable-version3 \
     --enable-static \
+    "${extra_version[@]}" \
     $PLATFORM_CONFIGURE_FLAGS; then
   cat ffbuild/config.log
   exit 1
 fi
 
-make
+# Two isolated native runner jobs; bound compiler concurrency within each.
+make -j2
 # No "make install" for ffmpeg.

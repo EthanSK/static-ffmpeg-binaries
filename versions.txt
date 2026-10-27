@@ -1,4 +1,10 @@
-ffmpeg: 20b009e30136cb55022ee32cfb4b2dcae1630bb4
+ffmpeg: 86444dd36834875f274f57705762c5448379d644
+ffmpeg-patch: patches/ffmpeg/seek-stream.patch
+ffmpeg-patch-sha256: 516646d11328187326d027476e3b1a63d296cf42b3ac83635a0d38260e4707c7
+ffmpeg-patched-tree: 163fd507b0f55388c04cdaad9393ce665d342635
+ffmpeg-patch-upstream: https://code.ffmpeg.org/FFmpeg/FFmpeg/pulls/25524
+ffmpeg-patch-issue: https://code.ffmpeg.org/FFmpeg/FFmpeg/issues/25223
+ffmpeg-patch-reviewed-commit: 4d74c2fe5f2dc456dc87c118fed2ea8b5a9fac88
 dav1d: 1.5.4
 dav1d-sha256: 686616b7c69eb88d44459391ab25cac13b6647a3b288835c5784e71c1514a5c5
 libvpx: v1.13.0

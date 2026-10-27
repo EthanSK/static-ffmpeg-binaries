@@ -1,5 +1,7 @@
 # Unreleased
 
+ - Prepare pinned seek-reference candidates with strict reviewed-tree patching, matched native control builds, SHA256 provenance and media/platform qualification. Candidates remain separate from `latest` and production adoption.
+
  - Pin FFmpeg to the first upstream revision with native animated WebP demuxing and decoding.
  - Verify release binaries can decode every frame of generated animated GIF and WebP files, including through stdin streams.
  - Keep manual and monthly `latest` releases pinned to the exact commit that produced their binaries.

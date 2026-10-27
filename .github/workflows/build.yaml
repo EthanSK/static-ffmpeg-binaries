@@ -30,6 +30,10 @@ on:
       ref:
         required: true
         type: string
+      qualify:
+        description: Build a matched unpatched control and compare the previous release
+        type: boolean
+        default: false
       # If true, start a debug SSH server on failures.
       debug:
         required: false
@@ -44,6 +48,10 @@ on:
   # Runs on manual trigger.
   workflow_dispatch:
     inputs:
+      qualify:
+        description: Build a matched unpatched control and compare the previous release
+        type: boolean
+        default: false
       # If true, start a debug SSH server on failures.
       debug:
         required: false
@@ -116,6 +124,9 @@ jobs:
 
     name: Build ${{ matrix.os_name }} ${{ matrix.target_arch }}
     runs-on: ${{ matrix.os }}
+    env:
+      QUALIFY: ${{ inputs.qualify || false }}
+      SUFFIX: -${{ matrix.os_name }}-${{ matrix.target_arch }}${{ matrix.exe_ext }}
 
     steps:
 
@@ -127,6 +138,9 @@ jobs:
 
       - name: Install OS packages
         run: ./repo-src/build-scripts/00-packages.sh
+
+      - name: Test strict patch application
+        run: python3 -B -m unittest discover -s repo-src/tests -p 'test_prepare_ffmpeg.py' -v
 
       - name: Install x264
         run: ./repo-src/build-scripts/03-x264.sh
@@ -164,21 +178,74 @@ jobs:
       - name: Verify required codecs
         run: ./repo-src/build-scripts/91-check-features.sh
 
+      - name: Build matched unpatched control
+        if: inputs.qualify
+        run: |
+          ./repo-src/build-scripts/90-ffmpeg.sh control
+          ./repo-src/build-scripts/91-check-features.sh ffmpeg-control
+          ./repo-src/build-scripts/99-check-static.sh ffmpeg-control
+
+      - name: Verify seek reference behavior and upstream regressions
+        run: bash ./repo-src/build-scripts/92-check-seek-stream.sh
+
+      - name: Compare previous release, unpatched control and candidate
+        if: inputs.qualify
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 repo-src/tests/fetch-baseline.py -- "$SUFFIX" baseline.noindex
+          python3 repo-src/tests/compare-builds.py \
+            "baseline.noindex/ffmpeg$SUFFIX" ffmpeg-control/ffmpeg ffmpeg/ffmpeg \
+            ffmpeg/ffprobe "baseline.noindex/ffprobe$SUFFIX" ffmpeg-control/ffprobe \
+            --work-dir seek-tests.noindex --report qualification.noindex/comparison.json
+
+      - name: Run full FATE without external samples
+        if: inputs.qualify
+        run: |
+          set -uo pipefail
+          make -C ffmpeg -k -j2 SAMPLES= fate 2>&1 | tee qualification.noindex/fate-full.log
+          fate_status=${PIPESTATUS[0]}
+          if [[ "$fate_status" -ne 0 ]]; then
+            # Attribute a failure to upstream or the patch without hiding it.
+            make -C ffmpeg-control -k -j2 SAMPLES= fate 2>&1 | tee qualification.noindex/fate-control.log
+            exit "$fate_status"
+          fi
+
+      - name: Verify CPU fallback without AVX
+        if: inputs.qualify && runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          sudo apt-get install --yes qemu-user
+          mkdir -p cpu.noindex
+          for program in ffmpeg ffprobe; do
+            printf '#!/bin/bash\nexec qemu-x86_64 -cpu Nehalem "%s" "$@"\n' \
+              "$PWD/ffmpeg/$program" > "cpu.noindex/$program"
+            chmod +x "cpu.noindex/$program"
+          done
+          bash repo-src/tests/check-av1.sh "$PWD/cpu.noindex/ffmpeg" "$PWD/cpu.noindex/ffprobe"
+          python3 repo-src/tests/check-seek-stream.py cpu.noindex/ffmpeg cpu.noindex/ffprobe \
+            --work-dir cpu.noindex --report qualification.noindex/cpu-no-avx.json
+
       - name: Prepare assets
         run: |
           set -e
           set -x
 
           mkdir assets
-          SUFFIX="-${{ matrix.os_name }}-${{ matrix.target_arch }}${{ matrix.exe_ext}}"
-          echo "SUFFIX=$SUFFIX" >> "$GITHUB_ENV"
-          cp ffmpeg/ffmpeg assets/ffmpeg"$SUFFIX"
-          cp ffmpeg/ffprobe assets/ffprobe"$SUFFIX"
+          python3 repo-src/tools/collect-provenance.py ffmpeg assets -- "$SUFFIX"
+          if [[ "$QUALIFY" == true ]]; then
+            python3 repo-src/tools/collect-provenance.py --control ffmpeg-control assets -- "$SUFFIX"
+          fi
+          for report in qualification.noindex/*; do
+            name=$(basename "$report")
+            cp "$report" "assets/${name%.*}$SUFFIX.${name##*.}"
+          done
 
-          # Show sizes and MD5 sums that can be verified by users later if they
-          # want to check for authenticity.
+          # Checksums identify downloaded bytes; they are not signatures.
           cd assets
           wc -c *
+          shasum -a 256 *
           md5sum *
 
       # This makes it possible to debug failures in the next step by
@@ -191,6 +258,15 @@ jobs:
 
       - name: Check that executables are static
         run: ./repo-src/build-scripts/99-check-static.sh
+
+      - name: Retain qualification diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: qualification-diagnostics${{ env.SUFFIX }}
+          path: qualification.noindex/
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Debug
         uses: mxschmitt/action-tmate@v3.24

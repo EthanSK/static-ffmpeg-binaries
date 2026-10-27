@@ -10,3 +10,5 @@
 
 # A local build folder
 build
+build.noindex/
+__pycache__/

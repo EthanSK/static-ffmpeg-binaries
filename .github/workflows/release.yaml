@@ -34,6 +34,7 @@ jobs:
     uses: ./.github/workflows/build.yaml
     with:
       ref: ${{ github.ref }}
+      qualify: ${{ contains(github.ref_name, '-seek-stream-rc') }}
 
   publish_release:
     name: Publish release
@@ -53,10 +54,12 @@ jobs:
         with:
           path: assets
           merge-multiple: true
+          pattern: binaries-*
 
       - name: Publish release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
         run: |
           set -e
           set -x
@@ -69,8 +72,18 @@ jobs:
           echo " - $(date -I)" >> body.txt
           echo "" >> body.txt
 
+          release_flags=()
+          if [[ "$RELEASE_TAG" == *-seek-stream-rc* ]]; then
+            release_flags=(--prerelease --latest=false)
+            echo "Candidate for qualification. Does not replace latest." >> body.txt
+            echo "Carries a proposed upstream patch; production adoption remains gated." >> body.txt
+            echo "https://code.ffmpeg.org/FFmpeg/FFmpeg/pulls/25524" >> body.txt
+            echo "https://code.ffmpeg.org/FFmpeg/FFmpeg/issues/25223" >> body.txt
+            echo "" >> body.txt
+          fi
+
           echo "${{ github.repository }} version:" >> body.txt
-          echo " - ${{ github.ref_name }}" >> body.txt
+          echo " - $RELEASE_TAG" >> body.txt
           echo "" >> body.txt
 
           echo "Software versions:" >> body.txt
@@ -82,11 +95,18 @@ jobs:
           echo "MD5 sums:" >> body.txt
           (cd assets; md5sum * | sed -e 's/^/ - /') >> body.txt
 
+          (cd assets; shasum -a 256 *) > SHA256SUMS
+          echo "" >> body.txt
+          echo "SHA256 sums:" >> body.txt
+          sed -e 's/^/ - /' SHA256SUMS >> body.txt
+          mv SHA256SUMS assets/
+
           # Publish the release, including release notes and assets.
           gh release create \
               -R ${{ github.repository }} \
               --verify-tag \
+              "${release_flags[@]}" \
               --notes-file body.txt \
-              --title "${{ github.ref_name }}" \
-              "${{ github.ref_name }}" \
+              --title "$RELEASE_TAG" \
+              "$RELEASE_TAG" \
               assets/*

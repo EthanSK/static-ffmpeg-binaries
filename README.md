@@ -10,8 +10,8 @@ To download binaries, visit the [releases page][releases].
 
 The GitHub Actions workflows and other scripts in this repo are covered by the
 Apache license.
-Please see the [workflow source][workflow], [API client source][api-client],
-[version script source][version-script], and see [the Apache license][apache]
+Please see the [workflow source][workflow], [version script source][version-script],
+and [the Apache license][apache]
 for license details.
 
 The resulting FFmpeg binaries are built using GPL libraries, and are therefore
@@ -23,10 +23,10 @@ license][gpl] for license details.
 # How are they built?
 
 FFmpeg and its key dependencies are all built from source and linked statically.
-Each run of the GitHub Actions workflow logs the MD5 sums of the binaries, and
-it places the MD5 sums into the release notes.  You can see how they were built,
-and you can verify that they haven't been tampered with.  The sums in the
-workflow logs, release notes, and the binaries should all match.
+Candidate builds record SHA256, source identity, configuration and platform
+linkage in per-platform provenance files. Versioned releases include SHA256SUMS
+and retain MD5 for compatibility. Checksums identify the downloaded bytes; they
+are not signatures or a promise of bit-identical rebuilds on moving runner images.
 You can read the details in the [workflow source][workflow].
 
 Minimal third-party GitHub Actions have been used in this workflow, to protect
@@ -35,6 +35,23 @@ against supply-chain attacks.  The following actions are used:
  - mxschmitt/action-tmate: Used only on failure to debug failed builds, and
    only if debug is configured at the repo level.
 
+
+# Seek-stream candidates
+
+The current branch pins an exact tested upstream FFmpeg revision and carries a
+small proposed `-seek_stream` patch. `versions.txt` records the patch digest,
+reviewed source tree, and upstream issue/PR links. It is under upstream review.
+See [BUILD-NOTES.md](BUILD-NOTES.md) for qualification, limitations and rollback.
+
+Tags such as `git-2026-10-27-86444dd-seek-stream-rc1` build both supported native
+platforms and publish a prerelease with `--latest=false`. Never reuse a candidate
+tag. Qualification builds include separately named `control-unpatched-*`
+binaries from the same upstream pin, toolchain, dependencies and configure path.
+The candidate adds only an identifying `--extra-version` configure argument.
+
+Do not merge this branch to main or replace the moving `latest` release before
+application qualification. When enabled, the monthly scheduled workflow rebuilds main into
+`latest`; this candidate does not modify that schedule or installed binaries.
 
 # Triggering a build
 
@@ -63,13 +80,13 @@ container to avoid polluting your system.
 2. If you are using Linux or macOS, run `export SUDO=sudo`.
 3. If you are using Linux, run `export RUNNER_OS=Linux`.
 4. If you are using macOS, run `export RUNNER_OS=macOS`.
-5. If you are using Linux, run `export RUNNER_OS=Windows`.
+5. If you are using Windows, run `export RUNNER_OS=Windows`.
 6. Set a temp path for `GITHUB_ENV`, for example `export GITHUB_ENV=/tmp/github.env`.
-7. Create a build folder.  For example, `mkdir -p build`.  It does not need to
+7. Create a build folder.  For example, `mkdir -p build.noindex`.  It does not need to
    be in the git working directory.
 8. Change into that build directory.
 9. Create a symlink to the repo root called `repo-src` to emulate the structure
-   used by the workflow.  For example, if `build` is inside the repo, use
+   used by the workflow.  For example, if `build.noindex` is inside the repo, use
    `ln -s ../ repo-src`.
 10. Run the build scripts in [`build-scripts`][] in numerical order.
 
@@ -84,10 +101,9 @@ docker run -v /path/to/static-ffmpeg-binaries:/src static-ffmpeg-binaries /src/b
 ```
 
 
-[releases]: https://github.com/shaka-project/static-ffmpeg-binaries/releases
-[workflow]: https://github.com/shaka-project/static-ffmpeg-binaries/blob/main/.github/workflows/release.yaml
-[api-client]: https://github.com/shaka-project/static-ffmpeg-binaries/blob/main/api-client/main.js
-[version-script]: https://github.com/shaka-project/static-ffmpeg-binaries/blob/main/get-version.sh
-[version-file]: https://github.com/shaka-project/static-ffmpeg-binaries/blob/main/versions.txt
-[apache]: https://github.com/shaka-project/static-ffmpeg-binaries/blob/main/LICENSE
+[releases]: https://github.com/EthanSK/static-ffmpeg-binaries/releases
+[workflow]: .github/workflows/release.yaml
+[version-script]: get-version.sh
+[version-file]: versions.txt
+[apache]: LICENSE
 [gpl]: https://github.com/FFmpeg/FFmpeg/blob/master/COPYING.GPLv3

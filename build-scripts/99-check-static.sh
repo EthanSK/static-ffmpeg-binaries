@@ -17,7 +17,7 @@
 set -e
 set -x
 
-cd ffmpeg
+cd "${1:-ffmpeg}"
 
 if [[ "$RUNNER_OS" == "Linux" ]]; then
   # We only check for static binaries on Alpine Linux.  In other distributions,

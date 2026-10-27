@@ -4,7 +4,7 @@ set -e
 set -o pipefail
 set -x
 
-cd ffmpeg
+cd "${1:-ffmpeg}"
 
 bash ../repo-src/tests/check-av1.sh ./ffmpeg ./ffprobe
 
