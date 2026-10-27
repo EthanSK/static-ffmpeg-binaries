@@ -173,12 +173,14 @@ jobs:
         run: bash ./repo-src/build-scripts/12-dav1d.sh
 
       - name: Build ffmpeg and ffprobe
+        id: candidate_build
         run: ./repo-src/build-scripts/90-ffmpeg.sh
 
       - name: Verify required codecs
         run: ./repo-src/build-scripts/91-check-features.sh
 
       - name: Build matched unpatched control
+        id: control_build
         if: inputs.qualify
         run: |
           ./repo-src/build-scripts/90-ffmpeg.sh control
@@ -201,7 +203,7 @@ jobs:
             --work-dir seek-tests.noindex --report qualification.noindex/comparison.json
 
       - name: Run full FATE without external samples
-        if: inputs.qualify
+        if: ${{ !cancelled() && inputs.qualify && steps.candidate_build.outcome == 'success' && steps.control_build.outcome == 'success' }}
         run: |
           set -uo pipefail
           make -C ffmpeg -k -j2 SAMPLES= fate 2>&1 | tee qualification.noindex/fate-full.log
@@ -213,7 +215,7 @@ jobs:
           fi
 
       - name: Verify CPU fallback without AVX
-        if: inputs.qualify && runner.os == 'Linux'
+        if: ${{ !cancelled() && inputs.qualify && runner.os == 'Linux' && steps.candidate_build.outcome == 'success' }}
         run: |
           set -euo pipefail
           sudo apt-get install --yes qemu-user
@@ -265,6 +267,28 @@ jobs:
         with:
           name: qualification-diagnostics${{ env.SUFFIX }}
           path: qualification.noindex/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Prepare unqualified binaries for failure analysis
+        if: failure()
+        continue-on-error: true
+        run: |
+          set -e
+          for source_directory in ffmpeg ffmpeg-control; do
+            if [[ -x "$source_directory/ffmpeg" && -x "$source_directory/ffprobe" ]]; then
+              arguments=("$source_directory" unqualified.noindex)
+              if [[ "$source_directory" == ffmpeg-control ]]; then arguments=(--control "${arguments[@]}"); fi
+              python3 repo-src/tools/collect-provenance.py "${arguments[@]}" -- "$SUFFIX"
+            fi
+          done
+
+      - name: Retain unqualified binaries for failure analysis
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: unqualified-binaries${{ env.SUFFIX }}
+          path: unqualified.noindex/
           if-no-files-found: ignore
           retention-days: 7
 

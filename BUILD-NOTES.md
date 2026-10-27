@@ -184,3 +184,12 @@ compiler and hosted runner images still move; provenance records them but this
 does not promise bit-identical recompilation. Bumping the pin or changing the
 carried patch requires repeating qualification. Drop/reconcile the patch when
 an equivalent upstream change lands, rather than silently skipping it.
+
+Observed upgrade delta: the new upstream demuxer drops AAC encoder padding at
+the declared audio end. A six-second, 48 kHz MP4 previously yielded 768 extra
+samples (16 ms); the unpatched control and patched version both stop at six
+seconds. Qualification checks this exact correction and gates other unexpected
+sample-count changes. Application qualification must include audio end timing.
+On macOS the upstream pin also auto-detects the system libcurl protocol; native
+HTTP/HTTPS remains the default (`prefer_libcurl=0`). Linux dependency names and
+glibc 2.35 remain unchanged in the first native comparison.

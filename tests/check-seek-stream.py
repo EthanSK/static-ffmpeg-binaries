@@ -129,6 +129,13 @@ class Checks:
         self.mkv = self.directory / "delayed-aac.mkv"
         generate(["-i", self.bframes, "-map", "0", "-c:v", "copy", "-c:a", "aac", self.aac])
         generate(["-i", self.aac, "-map", "0", "-c", "copy", self.mkv])
+        probe = subprocess.run([
+            str(self.ffprobe), "-v", "error", "-select_streams", "a:0", "-show_entries",
+            "stream=time_base,duration_ts", "-of", "json", str(self.aac),
+        ], capture_output=True, check=True, timeout=30)
+        audio = json.loads(probe.stdout)["streams"][0]
+        require((audio["time_base"], audio["duration_ts"]) == ("1/48000", 288000),
+                "AAC fixture no longer declares exactly six seconds of valid audio")
 
     def check(self):
         self.fixtures()
@@ -208,6 +215,23 @@ class Checks:
             actual = self.pcm(source, ["-ss", "1", "-seek_stream", "a:0"], ["-t", "1"])
             require(len(actual) == 96000, f"wrong AAC sample count in {source.name}")
             self.record(f"AAC-{source.suffix[1:]}", samples=48000)
+
+        # The pinned upstream revision now discards the AAC encoder's final
+        # 768 padding samples. This six-second track must not leak padding at
+        # its end, whether read linearly or sought, with or without our option.
+        for at, expected_samples in [("5.9", 4800), ("5.999", 48), ("6", 0),
+                                     ("6.001", 0), ("6.25", 0)]:
+            default = self.pcm(self.aac, ["-seek_timestamp", "1", "-ss", at], ["-t", "0.25"])
+            selected = self.pcm(self.aac, ["-seek_timestamp", "1", "-ss", at,
+                                         "-seek_stream", "a:0"], ["-t", "0.25"])
+            linear = self.pcm(self.aac, [], ["-ss", at, "-t", "0.25"])
+            require([len(data) // 2 for data in [default, selected, linear]] == [expected_samples] * 3,
+                    f"AAC program boundary changed at {at}")
+            if self.unpatched:
+                control = self.pcm(self.aac, ["-seek_timestamp", "1", "-ss", at],
+                                   ["-t", "0.25"], binary=self.unpatched)
+                require(len(control) // 2 == expected_samples, "AAC control boundary differs")
+            self.record(f"AAC-end-{at}", samples=expected_samples)
 
         input_to = self.pcm(self.delayed, ["-ss", "1", "-to", "1.25", "-seek_stream", "a:0"], [])
         require(input_to == expected, "input -to changed the selected window")

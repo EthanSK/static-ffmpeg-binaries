@@ -115,10 +115,20 @@ def main():
                                ["-stream_loop", "1", "-ss", "1"]]:
                     values = [checks.pcm(source, before, ["-t", "0.25"], binary=binary) for binary in bins]
                     require(values[1] == values[2], f"patch changed default PCM: {source.name} {before}")
-                    require(len(values[0]) == len(values[1]), f"upgrade changed sample count: {source.name} {before}")
-                    report["cases"].append({"input": source.name, "options": before, "output": "PCM",
-                                            "samples": len(values[1]) // 2, "candidate_equals_control": True,
-                                            "upgrade_bytes_equal": values[0] == values[1]})
+                    counts = [len(value) // 2 for value in values]
+                    row = {"input": source.name, "options": before, "output": "PCM",
+                           "samples_old_control_candidate": counts, "candidate_equals_control": True,
+                           "upgrade_bytes_equal": values[0] == values[1]}
+                    report["cases"].append(row)
+                    if source == checks.aac and before == ["-seek_timestamp", "1", "-ss", "6"]:
+                        # Verified upstream demux.c change: use the full codec
+                        # frame size to discard AAC end padding, not the last
+                        # packet's shorter valid duration. The fixture declares
+                        # 288000 valid samples; old emits 768 beyond that end.
+                        require(counts == [768, 0, 0], "known AAC padding correction changed")
+                        row["expected_upgrade_change"] = "Discard 768 AAC padding samples after the declared six-second end"
+                    else:
+                        require(counts[0] == counts[1], f"unreviewed upgrade sample-count change: {source.name} {before}: {counts}")
             for source, stream in [(checks.bframes, "0:v:0"), (checks.multi_video, "0:v:1")]:
                 for copy in [False, True]:
                     for before, after in [([], ["-t", "6"]), (["-ss", "3.25"], ["-t", "0.5"]),
