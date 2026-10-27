@@ -80,3 +80,6 @@ options -filter_complex_threads
 options -filter_threads
 options -threads
 options -rw_timeout
+# Current AIMVS final-audio and concat commands place this before an input.
+# Presence in -h full does not prove the input scope is still supported.
+input_options -thread_queue_size=1024

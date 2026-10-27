@@ -202,3 +202,13 @@ sample-count changes. Application qualification must include audio end timing.
 On macOS the upstream pin also auto-detects the system libcurl protocol; native
 HTTP/HTTPS remains the default (`prefer_libcurl=0`). Linux dependency names and
 glibc 2.35 remain unchanged in the first native comparison.
+
+Subsequent application qualification found another upgrade incompatibility:
+`-thread_queue_size` still appears in help, but `86444dd` accepts it only as an
+output option. Current AIMVS final-audio and concat commands place it before
+an input: the old binary accepts that command, while both new builds exit 234.
+The compatibility gate now executes required input options rather than only
+checking their names. It rejects rc2 under the current application contract.
+Do not promote rc2 until the application owner has adapted and qualified those
+commands and updated the input-option contract. The prior build checks remain
+historical evidence; they did not exercise this option placement.

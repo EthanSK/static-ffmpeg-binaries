@@ -88,6 +88,27 @@ def main():
             if not line or line.startswith("#"):
                 continue
             kind, name = line.split()
+            if kind == "input_options":
+                option, value = name.split("=", 1)
+                results = {}
+                with tempfile.TemporaryDirectory(suffix=".noindex", dir=args.work_dir) as temp:
+                    source = Path(temp) / "input.f32le"
+                    source.write_bytes(bytes(480 * 4))
+                    for label, binary in zip(["old", "control", "candidate"], bins):
+                        result = subprocess.run([
+                            str(binary), "-nostdin", "-v", "error", "-threads", "1",
+                            option, value, "-f", "f32le", "-ar", "48000", "-ac", "1",
+                            "-i", str(source), "-f", "null", "-",
+                        ], capture_output=True, text=True, timeout=30)
+                        results[label] = {"exit_code": result.returncode,
+                                          "error": result.stderr.splitlines()[:1]}
+                report.setdefault("input_option_scopes", {})[name] = results
+                require(results["old"]["exit_code"] == 0,
+                        f"invalid baseline for required input option {option}")
+                rejected = [label for label in ["control", "candidate"]
+                            if results[label]["exit_code"] != 0]
+                require(not rejected, f"required input option {option} rejected by {', '.join(rejected)}")
+                continue
             for label, index in [("control", 1), ("candidate", 2)]:
                 if kind == "options":
                     available = re.search(r"(?m)^\s*" + re.escape(name) + r"(?:\s|$)", help_text[index])
