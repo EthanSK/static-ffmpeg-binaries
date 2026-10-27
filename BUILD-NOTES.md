@@ -96,6 +96,15 @@ small fixture with explicitly limited decoder, filter and encoder threads.
 It neither changes application worker tiers nor proves a complete worker fits
 that tier after runtime, remote input and large RAM-backed output are included.
 
+When the selected build artifact includes a matched unpatched control, this
+diagnostic also runs the current seek regressions against those exact bytes
+(including separate 48 kHz and 44.1 kHz audio clocks). It then tests the pinned
+old pair, control and candidate sequentially in the same native 2 CPU / 8 GiB
+container contract, retaining separate timings, RSS, cgroup/OOM and output
+checks. This reuses successful build artifacts; it does not rebuild FFmpeg or
+replace `latest`. Reports identify the test script and invoked programs by
+SHA256. Single-fixture timings remain observations, not a worker cost estimate.
+
 ## 2026-10-08 AV1 artifact qualification
 
 Build run `37806734886` passed on native Linux x64 and macOS arm64 at source

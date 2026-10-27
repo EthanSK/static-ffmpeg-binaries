@@ -10,6 +10,7 @@ from fractions import Fraction
 import hashlib
 import io
 import json
+import os
 from pathlib import Path
 import struct
 import subprocess
@@ -44,13 +45,13 @@ class Checks:
         self.results.append({"case": name, "status": "passed", **details})
         print(f"PASS {name}", flush=True)
 
-    def pcm(self, source, before, after, stream="0:a:0", binary=None):
+    def pcm(self, source, before, after, stream="0:a:0", binary=None, rate=48000):
         output = self.run([
             *before, "-i", source, *after, "-map", stream,
             "-c:a", "pcm_s16le", "-threads", "1", "-f", "wav", "pipe:1",
         ], binary).stdout
         with wave.open(io.BytesIO(output)) as audio:
-            require(audio.getparams()[:3] == (1, 2, 48000), "unexpected PCM format")
+            require(audio.getparams()[:3] == (1, 2, rate), "unexpected PCM format")
             return audio.readframes(audio.getnframes())
 
     def packets(self, source, before, after, stream="0:v:0", copy=False,
@@ -71,10 +72,10 @@ class Checks:
         self.raw = b"".join(struct.pack("<h", (i * 97) % 24001 - 12000)
                             for i in range(48000 * 6))
         self.second = b"".join(struct.pack("<h", -(i * 71 % 20001 - 10000))
-                               for i in range(48000 * 6))
-        for name, data in [("first.wav", self.raw), ("second.wav", self.second)]:
+                               for i in range(44100 * 6))
+        for name, data, rate in [("first.wav", self.raw, 48000), ("second.wav", self.second, 44100)]:
             with wave.open(str(self.directory / name), "wb") as audio:
-                audio.setparams((1, 2, 48000, 0, "NONE", "not compressed"))
+                audio.setparams((1, 2, rate, 0, "NONE", "not compressed"))
                 audio.writeframes(data)
         self.delayed = self.directory / "delayed.mov"
         self.offset = self.directory / "offset.mov"
@@ -117,6 +118,13 @@ class Checks:
         ], capture_output=True, check=True, timeout=30)
         require(json.loads(probe.stdout)["streams"][0]["has_b_frames"] > 0,
                 "B-frame fixture contains no reordered frames")
+        probe = subprocess.run([
+            str(self.ffprobe), "-v", "error", "-show_entries", "stream=sample_rate,time_base",
+            "-of", "json", str(self.multi_audio),
+        ], capture_output=True, check=True, timeout=30)
+        require([(s["sample_rate"], s["time_base"]) for s in json.loads(probe.stdout)["streams"]]
+                == [("48000", "1/48000"), ("44100", "1/44100")],
+                "multi-audio fixture lost its distinct stream clocks")
         self.aac = self.directory / "delayed-aac.mp4"
         self.mkv = self.directory / "delayed-aac.mkv"
         generate(["-i", self.bframes, "-map", "0", "-c:v", "copy", "-c:a", "aac", self.aac])
@@ -207,9 +215,9 @@ class Checks:
 
         for selector in ["a:1", "1"]:
             actual = self.pcm(self.multi_audio, ["-ss", "2.5", "-seek_stream", selector],
-                              ["-t", "0.25"], "0:a:1")
-            require(actual == self.second[24000 * 2:36000 * 2], "wrong second audio")
-            self.record(f"second-audio-{selector}", samples=12000)
+                              ["-t", "0.25"], "0:a:1", rate=44100)
+            require(actual == self.second[22050 * 2:33075 * 2], "wrong second audio")
+            self.record(f"second-audio-{selector}", samples=11025, sample_rate=44100)
 
         trimmed = self.pcm(
             self.delayed, ["-ss", "1", "-seek_stream", "a:0"],
@@ -274,8 +282,17 @@ def main():
             status = "passed"
         finally:
             args.report.parent.mkdir(parents=True, exist_ok=True)
+            programs = {"ffmpeg": args.ffmpeg, "ffprobe": args.ffprobe}
+            if args.unpatched:
+                programs["unpatched"] = args.unpatched
+            identities = {name: {"path": str(path), "invoked_program_sha256":
+                                hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None}
+                          for name, path in programs.items()}
             args.report.write_text(json.dumps({"status": status, "checks": checks.results,
-                                              "matched_control": bool(args.unpatched)}, indent=2) + "\n")
+                                              "matched_control": bool(args.unpatched),
+                                              "invoked_programs": identities,
+                                              "test_script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+                                              "test_commit": os.environ.get("GITHUB_SHA")}, indent=2) + "\n")
 
 
 if __name__ == "__main__":

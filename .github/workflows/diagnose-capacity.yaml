@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       build_run_id:
-        description: Successful Build run whose Linux x64 artifact to test
+        description: Successful Build or Release run whose Linux x64 artifact to test
         required: true
         type: string
 
@@ -15,7 +15,7 @@ permissions:
 jobs:
   diagnose:
     runs-on: ubuntu-22.04
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
         with:
@@ -26,13 +26,38 @@ jobs:
           path: binaries
           run-id: ${{ inputs.build_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Measure the bounded maximum-raster fixture on native Linux
+      - name: Test the exact built bytes and bounded native conversion
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
+          set -euo pipefail
           chmod +x binaries/ffmpeg-linux-x64 binaries/ffprobe-linux-x64
           docker build -f tests/Dockerfile.capacity -t ffmpeg-capacity-base .
-          bash tests/diagnose-capacity.sh binaries
+          if [[ -f binaries/control-unpatched-ffmpeg-linux-x64 ]]; then
+            chmod +x binaries/control-unpatched-ffmpeg-linux-x64 binaries/control-unpatched-ffprobe-linux-x64
+            python3 tests/check-seek-stream.py binaries/ffmpeg-linux-x64 binaries/ffprobe-linux-x64 \
+              --unpatched binaries/control-unpatched-ffmpeg-linux-x64 \
+              --work-dir diagnostic-tmp.noindex --report diagnostics/seek-regressions.json
+            python3 tests/fetch-baseline.py -- -linux-x64 baseline.noindex
+            mkdir control.noindex
+            for program in ffmpeg ffprobe; do
+              ln -s "$PWD/binaries/control-unpatched-$program-linux-x64" "control.noindex/$program-linux-x64"
+            done
+            # Sequential runs share one native runner and the same 2 CPU / 8 GiB
+            # container contract. They do not allocate three concurrent workers.
+            bash tests/diagnose-capacity.sh baseline.noindex "$PWD/diagnostics/old"
+            bash tests/diagnose-capacity.sh control.noindex "$PWD/diagnostics/control"
+            bash tests/diagnose-capacity.sh binaries "$PWD/diagnostics/candidate"
+          else
+            # Preserve the original diagnostic for older ordinary Build artifacts.
+            bash tests/diagnose-capacity.sh binaries
+          fi
       - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: native-linux-capacity-diagnostics
-          path: diagnostics
+          path: |
+            diagnostics
+            !diagnostics/**/source.mp4
+            !diagnostics/source.mp4
+          retention-days: 7

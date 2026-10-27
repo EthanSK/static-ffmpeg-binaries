@@ -5,8 +5,9 @@ set -euo pipefail
 
 binary_directory=$(cd "$1" && pwd)
 fixture_directory=$(cd "$(dirname "$0")" && pwd)
-diagnostic_directory="$PWD/diagnostics"
+diagnostic_directory="${2:-$PWD/diagnostics}"
 mkdir -p "$diagnostic_directory"
+diagnostic_directory=$(cd "$diagnostic_directory" && pwd)
 base64 --decode < "$fixture_directory/square-10bit-16refs.mp4.base64" > "$diagnostic_directory/source.mp4"
 printf '%s  %s\n' \
   '42c86eae71c9c9c921ecf21fb005aaedca588c908abc799b382580dfcb030158' \
