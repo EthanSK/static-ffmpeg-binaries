@@ -139,6 +139,15 @@ Omitting it follows the existing automatic reference path. Demuxer seeking and
 other-track decodability remain format-dependent. In particular, an MKV seek
 can still scan bytes; this option is not a universal fast-seek guarantee.
 
+Sample-exact replacement of linear trimming also needs application testing.
+The rc2 macOS binaries matched linear PCM trimming for long PCM MOV/MKV and
+AAC MP4 fixtures, but a ten-minute 48 kHz AAC MKV with its first picture at
+300 seconds yielded 48,008 samples when seeking to 250 seconds for one second,
+versus 48,000 with linear `atrim`; the selected window began eight samples
+(about 0.17 ms) earlier. Keep a sample-sensitive application workaround until
+its real commands and media are qualified. Passing short AAC cases alone does
+not establish this equivalence.
+
 The source pin, patch SHA256, expected whole-source tree and upstream links
 live in `versions.txt`. `tools/prepare-ffmpeg.py` checks a fresh exact checkout,
 applies with Git's index, and verifies the reviewed tree before configure.
