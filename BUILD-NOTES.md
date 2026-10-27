@@ -212,3 +212,8 @@ checking their names. It rejects rc2 under the current application contract.
 Do not promote rc2 until the application owner has adapted and qualified those
 commands and updated the input-option contract. The prior build checks remain
 historical evidence; they did not exercise this option placement.
+Upstream commit `8d8c3fd81383ba9d6bde08b00efb5212bc24bc02` explains that
+the earlier scheduler rewrite had already made input `-thread_queue_size` a
+no-op. The old AIMVS binary accepted but did not use that input setting;
+removing it does not remove a working 1,024-packet input buffer. Do not move
+the value to output position as a substitute: that controls a different queue.
